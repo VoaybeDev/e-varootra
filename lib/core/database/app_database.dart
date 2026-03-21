@@ -1,0 +1,108 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart';
+import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+
+import 'tables/users_table.dart';
+import 'tables/clients_table.dart';
+import 'tables/products_table.dart';
+import 'tables/units_table.dart';
+import 'tables/product_units_table.dart';
+import 'tables/price_history_table.dart';
+import 'tables/debts_table.dart';
+import 'tables/payments_table.dart';
+import 'daos/user_dao.dart';
+import 'daos/client_dao.dart';
+import 'daos/product_dao.dart';
+import 'daos/debt_dao.dart';
+import 'daos/payment_dao.dart';
+
+part 'app_database.g.dart';
+
+@DriftDatabase(
+  tables: [
+    Users,
+    Clients,
+    Products,
+    Units,
+    ProductUnits,
+    PriceHistory,
+    Debts,
+    Payments,
+  ],
+  daos: [
+    UserDao,
+    ClientDao,
+    ProductDao,
+    DebtDao,
+    PaymentDao,
+  ],
+)
+class AppDatabase extends _$AppDatabase {
+  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+
+  @override
+  int get schemaVersion => 1;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+        await _seedInitialData();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        // Migrations futures ici
+      },
+    );
+  }
+
+  // Seed donnees initiales
+  Future<void> _seedInitialData() async {
+    // Utilisateur admin par defaut
+    await into(users).insert(
+      UsersCompanion.insert(
+        nomComplet: 'Administrateur',
+        pseudo: 'admin',
+        motDePasseHash: _hashPassword('1234'),
+      ),
+    );
+
+    // Unites par defaut
+    final unitesDefaut = [
+      UnitsCompanion.insert(nom: 'Kilogramme', symbole: const Value('kg')),
+      UnitsCompanion.insert(nom: 'Gramme', symbole: const Value('g')),
+      UnitsCompanion.insert(nom: 'Litre', symbole: const Value('L')),
+      UnitsCompanion.insert(nom: 'Millilitre', symbole: const Value('mL')),
+      UnitsCompanion.insert(nom: 'Piece', symbole: const Value('pce')),
+      UnitsCompanion.insert(nom: 'Sac', symbole: const Value('sac')),
+      UnitsCompanion.insert(nom: 'Boite', symbole: const Value('boite')),
+      UnitsCompanion.insert(nom: 'Carton', symbole: const Value('carton')),
+      UnitsCompanion.insert(nom: 'Bouteille', symbole: const Value('btl')),
+      UnitsCompanion.insert(nom: 'Paquet', symbole: const Value('pqt')),
+    ];
+
+    for (final unite in unitesDefaut) {
+      await into(units).insert(unite);
+    }
+  }
+
+  // Hash simple du mot de passe (SHA-256 en production)
+  static String _hashPassword(String password) {
+    // En production utiliser crypto package pour SHA-256
+    // Pour l'instant simple concatenation pour le dev
+    return 'hash_$password';
+  }
+
+  static QueryExecutor _openConnection() {
+    return driftDatabase(name: 'e_varootra_db');
+  }
+}
+
+// Provider global de la base de donnees
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  throw UnimplementedError('Override in main()');
+});
