@@ -11,6 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
 
+  shared_preferences: ^2.3.2
+
   # State management
   flutter_riverpod: ^2.5.1
   riverpod_annotation: ^2.3.5
