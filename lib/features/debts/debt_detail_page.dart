@@ -630,6 +630,12 @@ class _InvoiceViewer extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.bgCardHover,
                         borderRadius: BorderRadius.circular(10),
+                        border: Border(
+                          left: BorderSide(
+                            color: AppColors.success,
+                            width: 3,
+                          ),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -637,22 +643,50 @@ class _InvoiceViewer extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  AppFormatters.dateShort(p.datePaiement),
-                                  style: AppTextStyles.caption,
+                                // Date et heure
+                                Row(
+                                  children: [
+                                    const Icon(Icons.schedule_outlined,
+                                        size: 10, color: AppColors.textMuted),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${AppFormatters.dateShort(p.datePaiement)} - ${p.dateCreation.hour.toString().padLeft(2, '0')}:${p.dateCreation.minute.toString().padLeft(2, '0')}',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 3),
+                                // Vendeur
+                                if (p.nomUtilisateur != null)
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.person_outline,
+                                          size: 10, color: AppColors.accent),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        p.nomUtilisateur!,
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.accent,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                const SizedBox(height: 3),
+                                // Reference
                                 Text(
                                   'Ref: ${p.referencePaiement}',
                                   style: AppTextStyles.caption
                                       .copyWith(color: AppColors.textFaint),
                                 ),
-                                if (p.nomUtilisateur != null)
-                                  Text(
-                                    p.nomUtilisateur!,
-                                    style: AppTextStyles.caption
-                                        .copyWith(
-                                        color: AppColors.textFaint),
-                                  ),
+                                // Mode paiement
+                                Text(
+                                  p.modePaiement,
+                                  style: AppTextStyles.caption
+                                      .copyWith(color: AppColors.textFaint),
+                                ),
                               ],
                             ),
                           ),

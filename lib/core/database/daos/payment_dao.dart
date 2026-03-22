@@ -81,11 +81,12 @@ class PaymentDao extends DatabaseAccessor<AppDatabase> with _$PaymentDaoMixin {
   }
 
   // Verifier si une reference existe deja
+  // Corrige - get() retourne une liste sans planter
   Future<bool> referenceExists(String reference) async {
-    final row = await (select(payments)
+    final rows = await (select(payments)
       ..where((p) => p.referencePaiement.equals(reference)))
-        .getSingleOrNull();
-    return row != null;
+        .get();
+    return rows.isNotEmpty;
   }
 
   // Generer une reference unique

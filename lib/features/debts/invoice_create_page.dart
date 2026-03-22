@@ -17,6 +17,8 @@ import '../clients/clients_provider.dart';
 import '../products/products_provider.dart';
 import '../archive/archive_provider.dart';
 import '../dashboard/dashboard_provider.dart';
+import '../home/home_provider.dart';
+import 'debts_provider.dart';
 
 class InvoiceCreatePage extends ConsumerStatefulWidget {
   final int? preselectedClientId;

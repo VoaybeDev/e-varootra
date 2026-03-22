@@ -15,6 +15,7 @@ import '../../auth/auth_provider.dart';
 import '../../home/home_provider.dart';
 import '../../debts/debts_provider.dart';
 import '../../../core/widgets/app_header.dart';
+import '../../archive/archive_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
