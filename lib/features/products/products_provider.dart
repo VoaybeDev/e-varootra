@@ -86,7 +86,7 @@ class ProductsNotifier
       final productId = await _db.productDao.createProduct(
         ProductsCompanion(
           nom: Value(nom),
-          description: Value(description),
+          description: Value<String?>(description),
         ),
       );
 
@@ -144,7 +144,7 @@ class ProductsNotifier
         ProductsCompanion(
           id: Value(productId),
           nom: Value(nom),
-          description: Value(description),
+          description: Value<String?>(description),
         ),
       );
 

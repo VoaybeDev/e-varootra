@@ -380,9 +380,9 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: p.units.expand((u) {
+                children: p.units.expand<Widget>((u) {
                   if (u.history.isEmpty) return <Widget>[];
-                  return u.history.map((h) =>
+                  return u.history.map<Widget>((h) =>
                       _PriceHistoryRow(
                         entry: h,
                         unitName: u.unit.nomUnite ?? '?',
