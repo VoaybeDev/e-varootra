@@ -357,6 +357,22 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant(''));
+  static const VerificationMeta _cinMeta = const VerificationMeta('cin');
+  @override
+  late final GeneratedColumn<String> cin = GeneratedColumn<String>(
+      'cin', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _photoCinMeta =
+      const VerificationMeta('photoCin');
+  @override
+  late final GeneratedColumn<String> photoCin = GeneratedColumn<String>(
+      'photo_cin', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _photoMeta = const VerificationMeta('photo');
+  @override
+  late final GeneratedColumn<String> photo = GeneratedColumn<String>(
+      'photo', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _actifMeta = const VerificationMeta('actif');
   @override
   late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
@@ -375,8 +391,17 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, nomComplet, telephone, adresse, actif, dateCreation];
+  List<GeneratedColumn> get $columns => [
+        id,
+        nomComplet,
+        telephone,
+        adresse,
+        cin,
+        photoCin,
+        photo,
+        actif,
+        dateCreation
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -406,6 +431,18 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
       context.handle(_adresseMeta,
           adresse.isAcceptableOrUnknown(data['adresse']!, _adresseMeta));
     }
+    if (data.containsKey('cin')) {
+      context.handle(
+          _cinMeta, cin.isAcceptableOrUnknown(data['cin']!, _cinMeta));
+    }
+    if (data.containsKey('photo_cin')) {
+      context.handle(_photoCinMeta,
+          photoCin.isAcceptableOrUnknown(data['photo_cin']!, _photoCinMeta));
+    }
+    if (data.containsKey('photo')) {
+      context.handle(
+          _photoMeta, photo.isAcceptableOrUnknown(data['photo']!, _photoMeta));
+    }
     if (data.containsKey('actif')) {
       context.handle(
           _actifMeta, actif.isAcceptableOrUnknown(data['actif']!, _actifMeta));
@@ -433,6 +470,12 @@ class $ClientsTable extends Clients with TableInfo<$ClientsTable, Client> {
           .read(DriftSqlType.string, data['${effectivePrefix}telephone'])!,
       adresse: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}adresse'])!,
+      cin: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}cin']),
+      photoCin: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo_cin']),
+      photo: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo']),
       actif: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}actif'])!,
       dateCreation: attachedDatabase.typeMapping.read(
@@ -451,6 +494,9 @@ class Client extends DataClass implements Insertable<Client> {
   final String nomComplet;
   final String telephone;
   final String adresse;
+  final String? cin;
+  final String? photoCin;
+  final String? photo;
   final bool actif;
   final DateTime dateCreation;
   const Client(
@@ -458,6 +504,9 @@ class Client extends DataClass implements Insertable<Client> {
       required this.nomComplet,
       required this.telephone,
       required this.adresse,
+      this.cin,
+      this.photoCin,
+      this.photo,
       required this.actif,
       required this.dateCreation});
   @override
@@ -467,6 +516,15 @@ class Client extends DataClass implements Insertable<Client> {
     map['nom_complet'] = Variable<String>(nomComplet);
     map['telephone'] = Variable<String>(telephone);
     map['adresse'] = Variable<String>(adresse);
+    if (!nullToAbsent || cin != null) {
+      map['cin'] = Variable<String>(cin);
+    }
+    if (!nullToAbsent || photoCin != null) {
+      map['photo_cin'] = Variable<String>(photoCin);
+    }
+    if (!nullToAbsent || photo != null) {
+      map['photo'] = Variable<String>(photo);
+    }
     map['actif'] = Variable<bool>(actif);
     map['date_creation'] = Variable<DateTime>(dateCreation);
     return map;
@@ -478,6 +536,12 @@ class Client extends DataClass implements Insertable<Client> {
       nomComplet: Value(nomComplet),
       telephone: Value(telephone),
       adresse: Value(adresse),
+      cin: cin == null && nullToAbsent ? const Value.absent() : Value(cin),
+      photoCin: photoCin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoCin),
+      photo:
+          photo == null && nullToAbsent ? const Value.absent() : Value(photo),
       actif: Value(actif),
       dateCreation: Value(dateCreation),
     );
@@ -491,6 +555,9 @@ class Client extends DataClass implements Insertable<Client> {
       nomComplet: serializer.fromJson<String>(json['nomComplet']),
       telephone: serializer.fromJson<String>(json['telephone']),
       adresse: serializer.fromJson<String>(json['adresse']),
+      cin: serializer.fromJson<String?>(json['cin']),
+      photoCin: serializer.fromJson<String?>(json['photoCin']),
+      photo: serializer.fromJson<String?>(json['photo']),
       actif: serializer.fromJson<bool>(json['actif']),
       dateCreation: serializer.fromJson<DateTime>(json['dateCreation']),
     );
@@ -503,6 +570,9 @@ class Client extends DataClass implements Insertable<Client> {
       'nomComplet': serializer.toJson<String>(nomComplet),
       'telephone': serializer.toJson<String>(telephone),
       'adresse': serializer.toJson<String>(adresse),
+      'cin': serializer.toJson<String?>(cin),
+      'photoCin': serializer.toJson<String?>(photoCin),
+      'photo': serializer.toJson<String?>(photo),
       'actif': serializer.toJson<bool>(actif),
       'dateCreation': serializer.toJson<DateTime>(dateCreation),
     };
@@ -513,6 +583,9 @@ class Client extends DataClass implements Insertable<Client> {
           String? nomComplet,
           String? telephone,
           String? adresse,
+          Value<String?> cin = const Value.absent(),
+          Value<String?> photoCin = const Value.absent(),
+          Value<String?> photo = const Value.absent(),
           bool? actif,
           DateTime? dateCreation}) =>
       Client(
@@ -520,6 +593,9 @@ class Client extends DataClass implements Insertable<Client> {
         nomComplet: nomComplet ?? this.nomComplet,
         telephone: telephone ?? this.telephone,
         adresse: adresse ?? this.adresse,
+        cin: cin.present ? cin.value : this.cin,
+        photoCin: photoCin.present ? photoCin.value : this.photoCin,
+        photo: photo.present ? photo.value : this.photo,
         actif: actif ?? this.actif,
         dateCreation: dateCreation ?? this.dateCreation,
       );
@@ -530,6 +606,9 @@ class Client extends DataClass implements Insertable<Client> {
           data.nomComplet.present ? data.nomComplet.value : this.nomComplet,
       telephone: data.telephone.present ? data.telephone.value : this.telephone,
       adresse: data.adresse.present ? data.adresse.value : this.adresse,
+      cin: data.cin.present ? data.cin.value : this.cin,
+      photoCin: data.photoCin.present ? data.photoCin.value : this.photoCin,
+      photo: data.photo.present ? data.photo.value : this.photo,
       actif: data.actif.present ? data.actif.value : this.actif,
       dateCreation: data.dateCreation.present
           ? data.dateCreation.value
@@ -544,6 +623,9 @@ class Client extends DataClass implements Insertable<Client> {
           ..write('nomComplet: $nomComplet, ')
           ..write('telephone: $telephone, ')
           ..write('adresse: $adresse, ')
+          ..write('cin: $cin, ')
+          ..write('photoCin: $photoCin, ')
+          ..write('photo: $photo, ')
           ..write('actif: $actif, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
@@ -551,8 +633,8 @@ class Client extends DataClass implements Insertable<Client> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, nomComplet, telephone, adresse, actif, dateCreation);
+  int get hashCode => Object.hash(id, nomComplet, telephone, adresse, cin,
+      photoCin, photo, actif, dateCreation);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -561,6 +643,9 @@ class Client extends DataClass implements Insertable<Client> {
           other.nomComplet == this.nomComplet &&
           other.telephone == this.telephone &&
           other.adresse == this.adresse &&
+          other.cin == this.cin &&
+          other.photoCin == this.photoCin &&
+          other.photo == this.photo &&
           other.actif == this.actif &&
           other.dateCreation == this.dateCreation);
 }
@@ -570,6 +655,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
   final Value<String> nomComplet;
   final Value<String> telephone;
   final Value<String> adresse;
+  final Value<String?> cin;
+  final Value<String?> photoCin;
+  final Value<String?> photo;
   final Value<bool> actif;
   final Value<DateTime> dateCreation;
   const ClientsCompanion({
@@ -577,6 +665,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     this.nomComplet = const Value.absent(),
     this.telephone = const Value.absent(),
     this.adresse = const Value.absent(),
+    this.cin = const Value.absent(),
+    this.photoCin = const Value.absent(),
+    this.photo = const Value.absent(),
     this.actif = const Value.absent(),
     this.dateCreation = const Value.absent(),
   });
@@ -585,6 +676,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     required String nomComplet,
     this.telephone = const Value.absent(),
     this.adresse = const Value.absent(),
+    this.cin = const Value.absent(),
+    this.photoCin = const Value.absent(),
+    this.photo = const Value.absent(),
     this.actif = const Value.absent(),
     this.dateCreation = const Value.absent(),
   }) : nomComplet = Value(nomComplet);
@@ -593,6 +687,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     Expression<String>? nomComplet,
     Expression<String>? telephone,
     Expression<String>? adresse,
+    Expression<String>? cin,
+    Expression<String>? photoCin,
+    Expression<String>? photo,
     Expression<bool>? actif,
     Expression<DateTime>? dateCreation,
   }) {
@@ -601,6 +698,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
       if (nomComplet != null) 'nom_complet': nomComplet,
       if (telephone != null) 'telephone': telephone,
       if (adresse != null) 'adresse': adresse,
+      if (cin != null) 'cin': cin,
+      if (photoCin != null) 'photo_cin': photoCin,
+      if (photo != null) 'photo': photo,
       if (actif != null) 'actif': actif,
       if (dateCreation != null) 'date_creation': dateCreation,
     });
@@ -611,6 +711,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
       Value<String>? nomComplet,
       Value<String>? telephone,
       Value<String>? adresse,
+      Value<String?>? cin,
+      Value<String?>? photoCin,
+      Value<String?>? photo,
       Value<bool>? actif,
       Value<DateTime>? dateCreation}) {
     return ClientsCompanion(
@@ -618,6 +721,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
       nomComplet: nomComplet ?? this.nomComplet,
       telephone: telephone ?? this.telephone,
       adresse: adresse ?? this.adresse,
+      cin: cin ?? this.cin,
+      photoCin: photoCin ?? this.photoCin,
+      photo: photo ?? this.photo,
       actif: actif ?? this.actif,
       dateCreation: dateCreation ?? this.dateCreation,
     );
@@ -638,6 +744,15 @@ class ClientsCompanion extends UpdateCompanion<Client> {
     if (adresse.present) {
       map['adresse'] = Variable<String>(adresse.value);
     }
+    if (cin.present) {
+      map['cin'] = Variable<String>(cin.value);
+    }
+    if (photoCin.present) {
+      map['photo_cin'] = Variable<String>(photoCin.value);
+    }
+    if (photo.present) {
+      map['photo'] = Variable<String>(photo.value);
+    }
     if (actif.present) {
       map['actif'] = Variable<bool>(actif.value);
     }
@@ -654,6 +769,9 @@ class ClientsCompanion extends UpdateCompanion<Client> {
           ..write('nomComplet: $nomComplet, ')
           ..write('telephone: $telephone, ')
           ..write('adresse: $adresse, ')
+          ..write('cin: $cin, ')
+          ..write('photoCin: $photoCin, ')
+          ..write('photo: $photo, ')
           ..write('actif: $actif, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
@@ -3473,6 +3591,9 @@ typedef $$ClientsTableCreateCompanionBuilder = ClientsCompanion Function({
   required String nomComplet,
   Value<String> telephone,
   Value<String> adresse,
+  Value<String?> cin,
+  Value<String?> photoCin,
+  Value<String?> photo,
   Value<bool> actif,
   Value<DateTime> dateCreation,
 });
@@ -3481,6 +3602,9 @@ typedef $$ClientsTableUpdateCompanionBuilder = ClientsCompanion Function({
   Value<String> nomComplet,
   Value<String> telephone,
   Value<String> adresse,
+  Value<String?> cin,
+  Value<String?> photoCin,
+  Value<String?> photo,
   Value<bool> actif,
   Value<DateTime> dateCreation,
 });
@@ -3524,6 +3648,15 @@ class $$ClientsTableFilterComposer
 
   ColumnFilters<String> get adresse => $composableBuilder(
       column: $table.adresse, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get cin => $composableBuilder(
+      column: $table.cin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photoCin => $composableBuilder(
+      column: $table.photoCin, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get photo => $composableBuilder(
+      column: $table.photo, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get actif => $composableBuilder(
       column: $table.actif, builder: (column) => ColumnFilters(column));
@@ -3574,6 +3707,15 @@ class $$ClientsTableOrderingComposer
   ColumnOrderings<String> get adresse => $composableBuilder(
       column: $table.adresse, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get cin => $composableBuilder(
+      column: $table.cin, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photoCin => $composableBuilder(
+      column: $table.photoCin, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photo => $composableBuilder(
+      column: $table.photo, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<bool> get actif => $composableBuilder(
       column: $table.actif, builder: (column) => ColumnOrderings(column));
 
@@ -3602,6 +3744,15 @@ class $$ClientsTableAnnotationComposer
 
   GeneratedColumn<String> get adresse =>
       $composableBuilder(column: $table.adresse, builder: (column) => column);
+
+  GeneratedColumn<String> get cin =>
+      $composableBuilder(column: $table.cin, builder: (column) => column);
+
+  GeneratedColumn<String> get photoCin =>
+      $composableBuilder(column: $table.photoCin, builder: (column) => column);
+
+  GeneratedColumn<String> get photo =>
+      $composableBuilder(column: $table.photo, builder: (column) => column);
 
   GeneratedColumn<bool> get actif =>
       $composableBuilder(column: $table.actif, builder: (column) => column);
@@ -3658,6 +3809,9 @@ class $$ClientsTableTableManager extends RootTableManager<
             Value<String> nomComplet = const Value.absent(),
             Value<String> telephone = const Value.absent(),
             Value<String> adresse = const Value.absent(),
+            Value<String?> cin = const Value.absent(),
+            Value<String?> photoCin = const Value.absent(),
+            Value<String?> photo = const Value.absent(),
             Value<bool> actif = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
@@ -3666,6 +3820,9 @@ class $$ClientsTableTableManager extends RootTableManager<
             nomComplet: nomComplet,
             telephone: telephone,
             adresse: adresse,
+            cin: cin,
+            photoCin: photoCin,
+            photo: photo,
             actif: actif,
             dateCreation: dateCreation,
           ),
@@ -3674,6 +3831,9 @@ class $$ClientsTableTableManager extends RootTableManager<
             required String nomComplet,
             Value<String> telephone = const Value.absent(),
             Value<String> adresse = const Value.absent(),
+            Value<String?> cin = const Value.absent(),
+            Value<String?> photoCin = const Value.absent(),
+            Value<String?> photo = const Value.absent(),
             Value<bool> actif = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
@@ -3682,6 +3842,9 @@ class $$ClientsTableTableManager extends RootTableManager<
             nomComplet: nomComplet,
             telephone: telephone,
             adresse: adresse,
+            cin: cin,
+            photoCin: photoCin,
+            photo: photo,
             actif: actif,
             dateCreation: dateCreation,
           ),
