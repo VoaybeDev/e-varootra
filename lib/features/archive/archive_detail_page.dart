@@ -6,11 +6,11 @@ import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/formatters.dart';
 import '../../core/models/invoice_model.dart';
+import '../../core/services/pdf_service.dart';
 import '../../core/widgets/badge_status.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_text.dart';
 import '../archive/archive_provider.dart';
-import '../debts/debt_detail_page.dart';
 
 class ArchiveDetailPage extends ConsumerWidget {
   final int clientId;
@@ -30,7 +30,6 @@ class ArchiveDetailPage extends ConsumerWidget {
         ),
         error: (e, _) => Center(child: Text('Erreur: $e')),
         data: (invoices) {
-          // Tri
           final sorted = [...invoices];
           switch (sortMode) {
             case ArchiveSortMode.dateDesc:
@@ -55,11 +54,7 @@ class ArchiveDetailPage extends ConsumerWidget {
             return SafeArea(
               child: Column(
                 children: [
-                  _BackRow(
-                    title: 'Archive',
-                    subtitle: '-',
-                    amount: '0 Ar',
-                  ),
+                  _BackRow(title: 'Archive', subtitle: '-', amount: '0 Ar'),
                   const Expanded(
                     child: EmptyState(
                       icon: Icons.archive_outlined,
@@ -84,8 +79,6 @@ class ArchiveDetailPage extends ConsumerWidget {
                   subtitle: telClient,
                   amount: AppFormatters.currency(totalEncaisse),
                 ),
-
-                // Notice
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: Container(
@@ -94,8 +87,8 @@ class ArchiveDetailPage extends ConsumerWidget {
                     decoration: BoxDecoration(
                       color: AppColors.badgeWarningBg,
                       borderRadius: BorderRadius.circular(10),
-                      border:
-                      Border.all(color: AppColors.badgeWarningBorder),
+                      border: Border.all(
+                          color: AppColors.badgeWarningBorder),
                     ),
                     child: Row(
                       children: [
@@ -114,19 +107,15 @@ class ArchiveDetailPage extends ConsumerWidget {
                     ),
                   ),
                 ),
-
-                // Tri
                 _ArchiveSortBar(
                   current: sortMode,
                   onChanged: (mode) =>
                   ref.read(archiveSortProvider.notifier).state = mode,
                 ),
-
-                // Liste
                 Expanded(
                   child: RefreshIndicator(
-                    onRefresh: () async =>
-                        ref.invalidate(clientPaidInvoicesProvider(clientId)),
+                    onRefresh: () async => ref
+                        .invalidate(clientPaidInvoicesProvider(clientId)),
                     color: AppColors.accent,
                     backgroundColor: AppColors.bgCard,
                     child: ListView.builder(
@@ -134,7 +123,8 @@ class ArchiveDetailPage extends ConsumerWidget {
                       itemCount: sorted.length,
                       itemBuilder: (_, i) => _ArchiveInvoiceCard(
                         invoice: sorted[i],
-                        onView: () => _viewInvoice(context, sorted[i]),
+                        onView: () =>
+                            _viewInvoice(context, sorted[i]),
                       ),
                     ),
                   ),
@@ -198,7 +188,8 @@ class _BackRow extends StatelessWidget {
               children: [
                 Text(title, style: AppTextStyles.headlineSmall),
                 Text(subtitle,
-                    style: AppTextStyles.bodySmall.copyWith(fontSize: 12)),
+                    style:
+                    AppTextStyles.bodySmall.copyWith(fontSize: 12)),
               ],
             ),
           ),
@@ -266,8 +257,9 @@ class _ArchiveSortBar extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color:
-                  isActive ? AppColors.success : AppColors.textMuted,
+                  color: isActive
+                      ? AppColors.success
+                      : AppColors.textMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -326,18 +318,14 @@ class _ArchiveInvoiceCard extends StatelessWidget {
                 BadgeStatus(status: invoice.statut),
               ],
             ),
-
             const SizedBox(height: 8),
-
             Text(
               invoice.descriptionProduits,
               style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 10),
-
             Row(
               children: [
                 _AmountChip(
@@ -352,40 +340,73 @@ class _ArchiveInvoiceCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
-
             Container(
               padding: const EdgeInsets.only(top: 10),
               decoration: const BoxDecoration(
                 border:
                 Border(top: BorderSide(color: AppColors.border)),
               ),
-              child: GestureDetector(
-                onTap: onView,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.bgCardHover,
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.visibility_outlined,
-                          size: 12, color: AppColors.textMuted),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Voir la facture',
-                        style: AppTextStyles.buttonSmall.copyWith(
-                            fontSize: 12,
-                            color: AppColors.textMuted),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => PdfService.previewInvoice(
+                          context, invoice),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.brand,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.print_outlined,
+                                size: 12, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text('Imprimer',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: onView,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgCardHover,
+                          borderRadius: BorderRadius.circular(9),
+                          border:
+                          Border.all(color: AppColors.border),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.visibility_outlined,
+                                size: 12,
+                                color: AppColors.textMuted),
+                            SizedBox(width: 6),
+                            Text('Voir',
+                                style: TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -400,11 +421,8 @@ class _AmountChip extends StatelessWidget {
   final String value;
   final Color? color;
 
-  const _AmountChip({
-    required this.label,
-    required this.value,
-    this.color,
-  });
+  const _AmountChip(
+      {required this.label, required this.value, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -426,6 +444,9 @@ class _AmountChip extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════
+// VIEWER ARCHIVE REORGANISE
+// ═══════════════════════════════
 class _InvoiceArchiveViewer extends StatelessWidget {
   final InvoiceModel invoice;
 
@@ -434,7 +455,7 @@ class _InvoiceArchiveViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.92,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -458,7 +479,7 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                   child: Container(
                     width: 36,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
+                    margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       color: AppColors.textFaint,
                       borderRadius: BorderRadius.circular(2),
@@ -468,12 +489,45 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: GradientText(
-                        invoice.numeroFacture,
-                        gradient: AppGradients.brand,
-                        style: AppTextStyles.headlineMedium,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GradientText(
+                            invoice.numeroFacture,
+                            gradient: AppGradients.brand,
+                            style: AppTextStyles.headlineMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          BadgeStatus(status: invoice.statut),
+                        ],
                       ),
                     ),
+                    // Bouton imprimer
+                    GestureDetector(
+                      onTap: () =>
+                          PdfService.previewInvoice(context, invoice),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.brand,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.print_outlined,
+                                size: 14, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text('Imprimer',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
@@ -492,13 +546,16 @@ class _InvoiceArchiveViewer extends StatelessWidget {
               ],
             ),
           ),
+
+          const SizedBox(height: 12),
+
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Notice
+                  // Notice payee
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
@@ -524,73 +581,174 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Meta
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetaItem(
-                          label: 'Date',
-                          value: AppFormatters.dateShort(
-                              invoice.dateDette),
-                          label2: 'Vendeur',
-                          value2: invoice.nomVendeur,
+                  // Bloc info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCardHover,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _InfoBlock(
+                            items: [
+                              ('Date', AppFormatters.dateShort(
+                                  invoice.dateDette)),
+                              ('Vendeur', invoice.nomVendeur),
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: _MetaItem(
-                          label: 'Client',
-                          value: invoice.nomClient,
-                          label2: 'Tel',
-                          value2: invoice.telephoneClient.isNotEmpty
-                              ? invoice.telephoneClient
-                              : '-',
-                          alignRight: true,
+                        Container(
+                            width: 1,
+                            height: 50,
+                            color: AppColors.border),
+                        Expanded(
+                          child: _InfoBlock(
+                            alignRight: true,
+                            items: [
+                              ('Client', invoice.nomClient),
+                              ('Tel',
+                              invoice.telephoneClient.isNotEmpty
+                                  ? invoice.telephoneClient
+                                  : '-'),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
                   Text('PRODUITS', style: AppTextStyles.inputLabel),
                   const SizedBox(height: 8),
 
-                  ...invoice.lignes.asMap().entries.map((e) {
-                    final l = e.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgCardHover,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l.descriptionProduit,
-                              style: AppTextStyles.labelSmall,
+                  // Tableau produits
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCardHover,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                                bottom: BorderSide(
+                                    color: AppColors.border)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  flex: 3,
+                                  child: Text('Produit',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700))),
+                              SizedBox(
+                                  width: 40,
+                                  child: Text('Qte',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700),
+                                      textAlign: TextAlign.center)),
+                              SizedBox(
+                                  width: 70,
+                                  child: Text('Prix U.',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700),
+                                      textAlign: TextAlign.right)),
+                              SizedBox(
+                                  width: 75,
+                                  child: Text('Total',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700),
+                                      textAlign: TextAlign.right)),
+                            ],
+                          ),
+                        ),
+                        ...invoice.lignes.asMap().entries.map((e) {
+                          final l = e.value;
+                          final isLast =
+                              e.key == invoice.lignes.length - 1;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              border: isLast
+                                  ? null
+                                  : const Border(
+                                  bottom: BorderSide(
+                                      color: AppColors.border)),
                             ),
-                          ),
-                          Text(
-                            'x${l.quantite.toStringAsFixed(l.quantite % 1 == 0 ? 0 : 1)}',
-                            style: AppTextStyles.caption,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            AppFormatters.currency(l.montantTotal),
-                            style: AppTextStyles.labelSmall
-                                .copyWith(fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    l.descriptionProduit,
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 40,
+                                  child: Text(
+                                    'x${l.quantite.toStringAsFixed(l.quantite % 1 == 0 ? 0 : 1)}',
+                                    style: AppTextStyles.caption
+                                        .copyWith(
+                                        color:
+                                        AppColors.textPrimary),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                    AppFormatters.currency(
+                                        l.prixUnitaireFige),
+                                    style: AppTextStyles.caption,
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 75,
+                                  child: Text(
+                                    AppFormatters.currency(
+                                        l.montantTotal),
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 12),
 
+                  // Totaux
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -601,12 +759,11 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        _TotalLine(
-                          label: 'Total',
-                          value: AppFormatters.currency(
-                              invoice.montantTotal),
-                        ),
-                        _TotalLine(
+                        _TotalRow(
+                            label: 'Total',
+                            value: AppFormatters.currency(
+                                invoice.montantTotal)),
+                        _TotalRow(
                           label: 'Paye',
                           value: AppFormatters.currency(
                               invoice.montantPaye),
@@ -617,6 +774,7 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                     ),
                   ),
 
+                  // Historique paiements avec vendeur + heure
                   if (invoice.paiements.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text('HISTORIQUE PAIEMENTS',
@@ -629,6 +787,10 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AppColors.bgCardHover,
                         borderRadius: BorderRadius.circular(10),
+                        border: const Border(
+                          left: BorderSide(
+                              color: AppColors.success, width: 3),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -637,13 +799,54 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                               crossAxisAlignment:
                               CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  AppFormatters.dateShort(
-                                      p.datePaiement),
-                                  style: AppTextStyles.caption,
+                                Row(
+                                  children: [
+                                    const Icon(
+                                        Icons.schedule_outlined,
+                                        size: 10,
+                                        color:
+                                        AppColors.textMuted),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${AppFormatters.dateShort(p.datePaiement)} - ${p.dateCreation.hour.toString().padLeft(2, '0')}:${p.dateCreation.minute.toString().padLeft(2, '0')}',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w600),
+                                    ),
+                                  ],
                                 ),
+                                const SizedBox(height: 3),
+                                if (p.nomUtilisateur != null)
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                          Icons.person_outline,
+                                          size: 10,
+                                          color: AppColors.accent),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        p.nomUtilisateur!,
+                                        style: AppTextStyles
+                                            .caption
+                                            .copyWith(
+                                            color:
+                                            AppColors.accent,
+                                            fontWeight:
+                                            FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                const SizedBox(height: 3),
                                 Text(
                                   'Ref: ${p.referencePaiement}',
+                                  style: AppTextStyles.caption
+                                      .copyWith(
+                                      color:
+                                      AppColors.textFaint),
+                                ),
+                                Text(
+                                  p.modePaiement,
                                   style: AppTextStyles.caption
                                       .copyWith(
                                       color:
@@ -656,7 +859,8 @@ class _InvoiceArchiveViewer extends StatelessWidget {
                             '+${AppFormatters.currency(p.montantPaye)}',
                             gradient: AppGradients.green,
                             style: AppTextStyles.labelSmall
-                                .copyWith(fontWeight: FontWeight.w700),
+                                .copyWith(
+                                fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -672,49 +876,49 @@ class _InvoiceArchiveViewer extends StatelessWidget {
   }
 }
 
-class _MetaItem extends StatelessWidget {
-  final String label;
-  final String value;
-  final String label2;
-  final String value2;
+class _InfoBlock extends StatelessWidget {
+  final List<(String, String)> items;
   final bool alignRight;
 
-  const _MetaItem({
-    required this.label,
-    required this.value,
-    required this.label2,
-    required this.value2,
-    this.alignRight = false,
-  });
+  const _InfoBlock({required this.items, this.alignRight = false});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: alignRight
-          ? CrossAxisAlignment.end
-          : CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        Text(value,
-            style: AppTextStyles.labelSmall
-                .copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 6),
-        Text(label2, style: AppTextStyles.caption),
-        Text(value2,
-            style: AppTextStyles.labelSmall
-                .copyWith(fontWeight: FontWeight.w700)),
-      ],
+    return Padding(
+      padding: EdgeInsets.only(
+          left: alignRight ? 12 : 0, right: alignRight ? 0 : 12),
+      child: Column(
+        crossAxisAlignment: alignRight
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: items.map((item) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: alignRight
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Text(item.$1, style: AppTextStyles.caption),
+                Text(item.$2,
+                    style: AppTextStyles.labelSmall
+                        .copyWith(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
 
-class _TotalLine extends StatelessWidget {
+class _TotalRow extends StatelessWidget {
   final String label;
   final String value;
   final Color? color;
   final bool isBold;
 
-  const _TotalLine({
+  const _TotalRow({
     required this.label,
     required this.value,
     this.color,

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,12 +8,12 @@ import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/formatters.dart';
 import '../../core/models/invoice_model.dart';
+import '../../core/services/pdf_service.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/badge_status.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_text.dart';
 import '../debts/debts_provider.dart';
-import '../debts/invoice_create_page.dart';
 import '../debts/payment_sheet.dart';
 
 class DebtDetailPage extends ConsumerWidget {
@@ -54,8 +56,8 @@ class DebtDetailPage extends ConsumerWidget {
 
           final nomClient = invoices.first.nomClient;
           final telClient = invoices.first.telephoneClient;
-          final totalRestant = invoices.fold(
-              0.0, (s, inv) => s + inv.montantRestant);
+          final totalRestant =
+          invoices.fold(0.0, (s, inv) => s + inv.montantRestant);
 
           return SafeArea(
             child: Column(
@@ -66,11 +68,7 @@ class DebtDetailPage extends ConsumerWidget {
                   amount: AppFormatters.currency(totalRestant),
                   gradient: AppGradients.rose,
                 ),
-
-                // Tri
                 _SortBar(clientId: clientId),
-
-                // Liste factures
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () async =>
@@ -174,8 +172,7 @@ class _BackRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Total du',
-                  style: AppTextStyles.caption),
+              Text('Total du', style: AppTextStyles.caption),
               GradientText(
                 amount,
                 gradient: gradient,
@@ -220,7 +217,8 @@ class _SortBar extends ConsumerWidget {
             onTap: () =>
             ref.read(debtSortProvider.notifier).state = mode,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.badgeAccentBg
@@ -235,7 +233,8 @@ class _SortBar extends ConsumerWidget {
               child: Text(
                 label,
                 style: AppTextStyles.labelSmall.copyWith(
-                  color: isActive ? AppColors.accent : AppColors.textMuted,
+                  color:
+                  isActive ? AppColors.accent : AppColors.textMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -275,7 +274,6 @@ class _InvoiceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -299,20 +297,14 @@ class _InvoiceCard extends StatelessWidget {
                 BadgeStatus(status: invoice.statut),
               ],
             ),
-
             const SizedBox(height: 8),
-
-            // Produits
             Text(
               invoice.descriptionProduits,
               style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 10),
-
-            // Montants
             Row(
               children: [
                 _AmountItem(
@@ -328,7 +320,8 @@ class _InvoiceCard extends StatelessWidget {
                   const SizedBox(width: 14),
                   _AmountItem(
                     label: 'Restant',
-                    value: AppFormatters.currency(invoice.montantRestant),
+                    value:
+                    AppFormatters.currency(invoice.montantRestant),
                     color: invoice.montantRestant > 0
                         ? AppColors.danger
                         : AppColors.success,
@@ -336,18 +329,18 @@ class _InvoiceCard extends StatelessWidget {
                 ],
               ],
             ),
-
             const SizedBox(height: 10),
-
-            // Boutons
             Container(
               padding: const EdgeInsets.only(top: 10),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: AppColors.border)),
+                border:
+                Border(top: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
-                  if (!isArchive && invoice.montantRestant > 0 && onPay != null)
+                  if (!isArchive &&
+                      invoice.montantRestant > 0 &&
+                      onPay != null)
                     Expanded(
                       child: GestureDetector(
                         onTap: onPay,
@@ -372,7 +365,9 @@ class _InvoiceCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                  if (!isArchive && invoice.montantRestant > 0 && onPay != null)
+                  if (!isArchive &&
+                      invoice.montantRestant > 0 &&
+                      onPay != null)
                     const SizedBox(width: 8),
                   Expanded(
                     child: GestureDetector(
@@ -389,10 +384,12 @@ class _InvoiceCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Icon(Icons.visibility_outlined,
-                                size: 12, color: AppColors.textMuted),
+                                size: 12,
+                                color: AppColors.textMuted),
                             const SizedBox(width: 6),
                             Text('Voir',
-                                style: AppTextStyles.buttonSmall.copyWith(
+                                style: AppTextStyles.buttonSmall
+                                    .copyWith(
                                     fontSize: 12,
                                     color: AppColors.textMuted)),
                           ],
@@ -415,7 +412,8 @@ class _AmountItem extends StatelessWidget {
   final String value;
   final Color? color;
 
-  const _AmountItem({required this.label, required this.value, this.color});
+  const _AmountItem(
+      {required this.label, required this.value, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -437,15 +435,18 @@ class _AmountItem extends StatelessWidget {
   }
 }
 
-class _InvoiceViewer extends ConsumerWidget {
+// ═══════════════════════════════
+// VIEWER FACTURE REORGANISE
+// ═══════════════════════════════
+class _InvoiceViewer extends StatelessWidget {
   final InvoiceModel invoice;
 
   const _InvoiceViewer({required this.invoice});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.92,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
@@ -461,6 +462,7 @@ class _InvoiceViewer extends ConsumerWidget {
       ),
       child: Column(
         children: [
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
             child: Column(
@@ -469,7 +471,7 @@ class _InvoiceViewer extends ConsumerWidget {
                   child: Container(
                     width: 36,
                     height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
+                    margin: const EdgeInsets.only(bottom: 14),
                     decoration: BoxDecoration(
                       color: AppColors.textFaint,
                       borderRadius: BorderRadius.circular(2),
@@ -479,12 +481,45 @@ class _InvoiceViewer extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: GradientText(
-                        invoice.numeroFacture,
-                        gradient: AppGradients.brand,
-                        style: AppTextStyles.headlineMedium,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GradientText(
+                            invoice.numeroFacture,
+                            gradient: AppGradients.brand,
+                            style: AppTextStyles.headlineMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          BadgeStatus(status: invoice.statut),
+                        ],
                       ),
                     ),
+                    // Bouton imprimer
+                    GestureDetector(
+                      onTap: () =>
+                          PdfService.previewInvoice(context, invoice),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: AppGradients.brand,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.print_outlined,
+                                size: 14, color: Colors.white),
+                            SizedBox(width: 6),
+                            Text('Imprimer',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
                       child: Container(
@@ -503,78 +538,181 @@ class _InvoiceViewer extends ConsumerWidget {
               ],
             ),
           ),
+
+          const SizedBox(height: 12),
+
+          // Contenu scrollable
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Meta
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetaBlock(
-                          label: 'Date',
-                          value: AppFormatters.dateShort(invoice.dateDette),
-                          label2: 'Vendeur',
-                          value2: invoice.nomVendeur,
+                  // Bloc info client/vendeur
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCardHover,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _InfoBlock(
+                            items: [
+                              ('Date', AppFormatters.dateShort(
+                                  invoice.dateDette)),
+                              ('Vendeur', invoice.nomVendeur),
+                            ],
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: _MetaBlock(
-                          label: 'Client',
-                          value: invoice.nomClient,
-                          label2: 'Tel',
-                          value2: invoice.telephoneClient.isNotEmpty
-                              ? invoice.telephoneClient
-                              : '-',
-                          alignRight: true,
+                        Container(
+                            width: 1,
+                            height: 50,
+                            color: AppColors.border),
+                        Expanded(
+                          child: _InfoBlock(
+                            alignRight: true,
+                            items: [
+                              ('Client', invoice.nomClient),
+                              ('Tel',
+                              invoice.telephoneClient.isNotEmpty
+                                  ? invoice.telephoneClient
+                                  : '-'),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Lignes
+                  // Tableau produits
                   Text('PRODUITS', style: AppTextStyles.inputLabel),
                   const SizedBox(height: 8),
-                  ...invoice.lignes.asMap().entries.map((e) {
-                    final i = e.key;
-                    final l = e.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.bgCardHover,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Text('${i + 1}.',
-                              style: AppTextStyles.caption
-                                  .copyWith(color: AppColors.textFaint)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              l.descriptionProduit,
-                              style: AppTextStyles.labelSmall,
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCardHover,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        // Header tableau
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                                bottom:
+                                BorderSide(color: AppColors.border)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  flex: 3,
+                                  child: Text('Produit',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700))),
+                              SizedBox(
+                                  width: 40,
+                                  child: Text('Qte',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight: FontWeight
+                                              .w700),
+                                      textAlign: TextAlign.center)),
+                              SizedBox(
+                                  width: 70,
+                                  child: Text('Prix U.',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700),
+                                      textAlign: TextAlign.right)),
+                              SizedBox(
+                                  width: 75,
+                                  child: Text('Total',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w700),
+                                      textAlign: TextAlign.right)),
+                            ],
+                          ),
+                        ),
+
+                        // Lignes
+                        ...invoice.lignes.asMap().entries.map((e) {
+                          final l = e.value;
+                          final isLast =
+                              e.key == invoice.lignes.length - 1;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              border: isLast
+                                  ? null
+                                  : const Border(
+                                  bottom: BorderSide(
+                                      color: AppColors.border)),
                             ),
-                          ),
-                          Text(
-                            'x${l.quantite.toStringAsFixed(l.quantite % 1 == 0 ? 0 : 1)}',
-                            style: AppTextStyles.caption,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            AppFormatters.currency(l.montantTotal),
-                            style: AppTextStyles.labelSmall.copyWith(
-                                fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    l.descriptionProduit,
+                                    style: AppTextStyles.labelSmall
+                                        .copyWith(fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 40,
+                                  child: Text(
+                                    'x${l.quantite.toStringAsFixed(l.quantite % 1 == 0 ? 0 : 1)}',
+                                    style: AppTextStyles.caption
+                                        .copyWith(
+                                        color:
+                                        AppColors.textPrimary),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 70,
+                                  child: Text(
+                                    AppFormatters.currency(
+                                        l.prixUnitaireFige),
+                                    style: AppTextStyles.caption,
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 75,
+                                  child: Text(
+                                    AppFormatters.currency(
+                                        l.montantTotal),
+                                    style:
+                                    AppTextStyles.labelSmall.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 12),
 
@@ -595,10 +733,12 @@ class _InvoiceViewer extends ConsumerWidget {
                                 invoice.montantTotal)),
                         _TotalRow(
                           label: 'Paye',
-                          value: AppFormatters.currency(invoice.montantPaye),
+                          value: AppFormatters.currency(
+                              invoice.montantPaye),
                           color: AppColors.success,
                         ),
-                        const Divider(color: AppColors.border, height: 16),
+                        const Divider(
+                            color: AppColors.border, height: 16),
                         _TotalRow(
                           label: 'Restant',
                           value: AppFormatters.currency(
@@ -611,11 +751,6 @@ class _InvoiceViewer extends ConsumerWidget {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Statut
-                  BadgeStatus(status: invoice.statut),
 
                   // Historique paiements
                   if (invoice.paiements.isNotEmpty) ...[
@@ -630,62 +765,68 @@ class _InvoiceViewer extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.bgCardHover,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border(
+                        border: const Border(
                           left: BorderSide(
-                            color: AppColors.success,
-                            width: 3,
-                          ),
+                              color: AppColors.success, width: 3),
                         ),
                       ),
                       child: Row(
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
-                                // Date et heure
                                 Row(
                                   children: [
-                                    const Icon(Icons.schedule_outlined,
-                                        size: 10, color: AppColors.textMuted),
+                                    const Icon(
+                                        Icons.schedule_outlined,
+                                        size: 10,
+                                        color: AppColors.textMuted),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${AppFormatters.dateShort(p.datePaiement)} - ${p.dateCreation.hour.toString().padLeft(2, '0')}:${p.dateCreation.minute.toString().padLeft(2, '0')}',
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          fontWeight:
+                                          FontWeight.w600),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 3),
-                                // Vendeur
                                 if (p.nomUtilisateur != null)
                                   Row(
                                     children: [
-                                      const Icon(Icons.person_outline,
-                                          size: 10, color: AppColors.accent),
+                                      const Icon(
+                                          Icons.person_outline,
+                                          size: 10,
+                                          color: AppColors.accent),
                                       const SizedBox(width: 4),
                                       Text(
                                         p.nomUtilisateur!,
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: AppColors.accent,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                        style: AppTextStyles.caption
+                                            .copyWith(
+                                            color:
+                                            AppColors.accent,
+                                            fontWeight:
+                                            FontWeight.w600),
                                       ),
                                     ],
                                   ),
                                 const SizedBox(height: 3),
-                                // Reference
                                 Text(
                                   'Ref: ${p.referencePaiement}',
                                   style: AppTextStyles.caption
-                                      .copyWith(color: AppColors.textFaint),
+                                      .copyWith(
+                                      color:
+                                      AppColors.textFaint),
                                 ),
-                                // Mode paiement
                                 Text(
                                   p.modePaiement,
                                   style: AppTextStyles.caption
-                                      .copyWith(color: AppColors.textFaint),
+                                      .copyWith(
+                                      color:
+                                      AppColors.textFaint),
                                 ),
                               ],
                             ),
@@ -693,8 +834,8 @@ class _InvoiceViewer extends ConsumerWidget {
                           GradientText(
                             '+${AppFormatters.currency(p.montantPaye)}',
                             gradient: AppGradients.green,
-                            style: AppTextStyles.labelSmall
-                                .copyWith(fontWeight: FontWeight.w700),
+                            style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),
@@ -710,37 +851,38 @@ class _InvoiceViewer extends ConsumerWidget {
   }
 }
 
-class _MetaBlock extends StatelessWidget {
-  final String label;
-  final String value;
-  final String label2;
-  final String value2;
+class _InfoBlock extends StatelessWidget {
+  final List<(String, String)> items;
   final bool alignRight;
 
-  const _MetaBlock({
-    required this.label,
-    required this.value,
-    required this.label2,
-    required this.value2,
-    this.alignRight = false,
-  });
+  const _InfoBlock({required this.items, this.alignRight = false});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment:
-      alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.caption),
-        Text(value,
-            style:
-            AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 6),
-        Text(label2, style: AppTextStyles.caption),
-        Text(value2,
-            style:
-            AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w700)),
-      ],
+    return Padding(
+      padding: EdgeInsets.only(
+          left: alignRight ? 12 : 0, right: alignRight ? 0 : 12),
+      child: Column(
+        crossAxisAlignment: alignRight
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: items.map((item) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: alignRight
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Text(item.$1, style: AppTextStyles.caption),
+                Text(item.$2,
+                    style: AppTextStyles.labelSmall
+                        .copyWith(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }
@@ -772,7 +914,8 @@ class _TotalRow extends StatelessWidget {
           Text(
             value,
             style: AppTextStyles.labelSmall.copyWith(
-              fontWeight: isBold ? FontWeight.w800 : FontWeight.w700,
+              fontWeight:
+              isBold ? FontWeight.w800 : FontWeight.w700,
               color: color ?? AppColors.textPrimary,
               fontSize: isBold ? 14 : 12,
             ),
