@@ -10,25 +10,41 @@ part 'user_dao.g.dart';
 class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
   UserDao(super.db);
 
-  // Recuperer tous les utilisateurs
   Future<List<UserModel>> getAllUsers() async {
     final rows = await select(users).get();
     return rows.map(_toModel).toList();
   }
 
-  // Recuperer un utilisateur par id
+  Future<List<UserModel>> getPendingUsers() async {
+    final rows = await (select(users)
+      ..where((u) => u.approuve.equals(false))
+      ..where((u) => u.role.equals('utilisateur')))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  Future<List<UserModel>> getApprovedUsers() async {
+    final rows = await (select(users)
+      ..where((u) => u.approuve.equals(true))
+      ..orderBy([(u) => OrderingTerm.asc(u.nomComplet)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
   Future<UserModel?> getUserById(int id) async {
-    final row = await (select(users)..where((u) => u.id.equals(id))).getSingleOrNull();
+    final row = await (select(users)
+      ..where((u) => u.id.equals(id)))
+        .getSingleOrNull();
     return row != null ? _toModel(row) : null;
   }
 
-  // Recuperer un utilisateur par pseudo
   Future<UserModel?> getUserByPseudo(String pseudo) async {
-    final row = await (select(users)..where((u) => u.pseudo.equals(pseudo))).getSingleOrNull();
+    final row = await (select(users)
+      ..where((u) => u.pseudo.equals(pseudo)))
+        .getSingleOrNull();
     return row != null ? _toModel(row) : null;
   }
 
-  // Verifier si un pseudo existe deja
   Future<bool> pseudoExists(String pseudo, {int? excludeId}) async {
     var query = select(users)..where((u) => u.pseudo.equals(pseudo));
     if (excludeId != null) {
@@ -38,8 +54,8 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
     return result != null;
   }
 
-  // Authentification
-  Future<UserModel?> authenticate(String pseudo, String passwordHash) async {
+  Future<UserModel?> authenticate(
+      String pseudo, String passwordHash) async {
     final row = await (select(users)
       ..where((u) => u.pseudo.equals(pseudo))
       ..where((u) => u.motDePasseHash.equals(passwordHash)))
@@ -47,23 +63,40 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
     return row != null ? _toModel(row) : null;
   }
 
-  // Creer un utilisateur
   Future<int> createUser(UsersCompanion companion) async {
     return into(users).insert(companion);
   }
 
-  // Mettre a jour un utilisateur
-  Future<bool> updateUser(UsersCompanion companion) async {
-    return update(users).replace(companion);
+  Future<void> approveUser(int id) async {
+    await (update(users)..where((u) => u.id.equals(id))).write(
+      const UsersCompanion(approuve: Value(true)),
+    );
   }
 
-  // Convertir en modele
+  Future<void> rejectUser(int id) async {
+    await (delete(users)..where((u) => u.id.equals(id))).go();
+  }
+
+  Future<void> updateUserRole(int id, String role) async {
+    await (update(users)..where((u) => u.id.equals(id))).write(
+      UsersCompanion(role: Value(role)),
+    );
+  }
+
+  Future<void> updatePassword(int id, String newHash) async {
+    await (update(users)..where((u) => u.id.equals(id))).write(
+      UsersCompanion(motDePasseHash: Value(newHash)),
+    );
+  }
+
   UserModel _toModel(User row) {
     return UserModel(
       id: row.id,
       nomComplet: row.nomComplet,
       pseudo: row.pseudo,
       motDePasseHash: row.motDePasseHash,
+      role: UserModel.roleFromString(row.role),
+      approuve: row.approuve,
       dateCreation: row.dateCreation,
     );
   }

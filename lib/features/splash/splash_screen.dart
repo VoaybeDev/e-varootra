@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,6 @@ import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/widgets/gradient_text.dart';
-import 'dart:ui' show ImageFilter;
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -41,55 +42,38 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.initState();
 
     _logoCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
+        vsync: this, duration: const Duration(milliseconds: 800));
     _textCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+        vsync: this, duration: const Duration(milliseconds: 600));
     _tagCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+        vsync: this, duration: const Duration(milliseconds: 600));
     _dotsCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+        vsync: this, duration: const Duration(milliseconds: 600));
     _orb1Ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 6000),
-    )..repeat(reverse: true);
+        vsync: this, duration: const Duration(milliseconds: 6000))
+      ..repeat(reverse: true);
     _orb2Ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 8000),
-    )..repeat(reverse: true);
+        vsync: this, duration: const Duration(milliseconds: 8000))
+      ..repeat(reverse: true);
 
     _logoScale = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut),
-    );
+        CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut));
     _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _logoCtrl, curve: Curves.easeOut),
-    );
+        CurvedAnimation(parent: _logoCtrl, curve: Curves.easeOut));
     _textOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut),
-    );
+        CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut));
     _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut));
+        begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+        CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut));
     _tagOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _tagCtrl, curve: Curves.easeOut),
-    );
+        CurvedAnimation(parent: _tagCtrl, curve: Curves.easeOut));
     _dotsOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _dotsCtrl, curve: Curves.easeOut),
-    );
+        CurvedAnimation(parent: _dotsCtrl, curve: Curves.easeOut));
     _orb1Y = Tween<double>(begin: 0, end: -20).animate(
-      CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut),
-    );
+        CurvedAnimation(parent: _orb1Ctrl, curve: Curves.easeInOut));
     _orb2Y = Tween<double>(begin: 0, end: -20).animate(
-      CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut),
-    );
+        CurvedAnimation(parent: _orb2Ctrl, curve: Curves.easeInOut));
 
     _startAnimations();
   }
@@ -102,8 +86,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _tagCtrl.forward();
     await Future.delayed(const Duration(milliseconds: 300));
     _dotsCtrl.forward();
-
-    // Attendre fin splash puis naviguer
     await Future.delayed(const Duration(milliseconds: 1600));
     if (mounted) _navigateNext();
   }
@@ -111,20 +93,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _navigateNext() async {
     final authService = ref.read(authServiceProvider);
     final onboardingDone = await authService.isOnboardingDone();
-    final userId = await authService.getSavedUserId();
 
     if (!mounted) return;
 
+    // Toujours rediriger vers auth - jamais de session sauvegardee
     if (!onboardingDone) {
       context.go(AppRoutes.onboarding);
-    } else if (userId != null) {
-      // Session existante - restaurer
-      final user = await authService.getUserById(userId);
-      if (user != null && mounted) {
-        context.go(AppRoutes.home);
-      } else {
-        context.go(AppRoutes.auth);
-      }
     } else {
       context.go(AppRoutes.auth);
     }
@@ -147,14 +121,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       backgroundColor: AppColors.bgDeep,
       body: Stack(
         children: [
-          // Fond gradient
           Container(
-            decoration: const BoxDecoration(
-              gradient: AppGradients.splashBg,
-            ),
-          ),
-
-          // Orbe 1 - haut droite
+              decoration: const BoxDecoration(
+                  gradient: AppGradients.splashBg)),
           AnimatedBuilder(
             animation: _orb1Y,
             builder: (_, __) => Positioned(
@@ -165,17 +134,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 height: 280,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.accent.withOpacity(0.08),
-                ),
-                child: BackdropFilter(
-                  filter: _blurFilter(60),
-                  child: const SizedBox.expand(),
+                  color: AppColors.accent.withValues(alpha: 0.08),
                 ),
               ),
             ),
           ),
-
-          // Orbe 2 - bas gauche
           AnimatedBuilder(
             animation: _orb2Y,
             builder: (_, __) => Positioned(
@@ -186,22 +149,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.purple.withOpacity(0.10),
-                ),
-                child: BackdropFilter(
-                  filter: _blurFilter(60),
-                  child: const SizedBox.expand(),
+                  color: AppColors.purple.withValues(alpha: 0.10),
                 ),
               ),
             ),
           ),
-
-          // Contenu central
           Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Logo E
                 AnimatedBuilder(
                   animation: _logoCtrl,
                   builder: (_, __) => Opacity(
@@ -216,14 +172,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           borderRadius: BorderRadius.circular(26),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accent.withOpacity(0.4),
+                              color: AppColors.accent
+                                  .withValues(alpha: 0.4),
                               blurRadius: 60,
                               offset: const Offset(0, 20),
-                            ),
-                            BoxShadow(
-                              color: Colors.white.withOpacity(0.1),
-                              blurRadius: 0,
-                              spreadRadius: 1,
                             ),
                           ],
                         ),
@@ -231,19 +183,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           child: Text(
                             'E',
                             style: AppTextStyles.displayLarge.copyWith(
-                              fontSize: 40,
-                              color: Colors.white,
-                            ),
+                                fontSize: 40, color: Colors.white),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Brand name
                 AnimatedBuilder(
                   animation: _textCtrl,
                   builder: (_, __) => Opacity(
@@ -258,26 +205,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
-                // Tagline
                 AnimatedBuilder(
                   animation: _tagCtrl,
                   builder: (_, __) => Opacity(
                     opacity: _tagOpacity.value,
                     child: Text(
                       AppConstants.appTagline,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        letterSpacing: 0.5,
-                      ),
+                      style: AppTextStyles.bodySmall
+                          .copyWith(letterSpacing: 0.5),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 48),
-
-                // Dots animes
                 AnimatedBuilder(
                   animation: _dotsCtrl,
                   builder: (_, __) => Opacity(
@@ -291,10 +231,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         ],
       ),
     );
-  }
-
-  ImageFilter _blurFilter(double sigma) {
-    return ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
   }
 }
 
@@ -320,12 +256,11 @@ class _AnimatedDotsState extends State<_AnimatedDots>
         duration: const Duration(milliseconds: 1400),
       )..repeat(reverse: true),
     );
-
-    _anims = _ctrls.map((c) => Tween<double>(begin: 0, end: 1).animate(
+    _anims = _ctrls
+        .map((c) => Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: c, curve: Curves.easeInOut),
-    )).toList();
-
-    // Delais decales
+    ))
+        .toList();
     for (int i = 0; i < _ctrls.length; i++) {
       Future.delayed(Duration(milliseconds: i * 200), () {
         if (mounted) _ctrls[i].forward();
@@ -349,7 +284,6 @@ class _AnimatedDotsState extends State<_AnimatedDots>
         return AnimatedBuilder(
           animation: _anims[i],
           builder: (_, __) {
-            final v = _anims[i].value;
             return Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
               width: 8,
@@ -357,9 +291,9 @@ class _AnimatedDotsState extends State<_AnimatedDots>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Color.lerp(
-                  Colors.white.withOpacity(0.2),
+                  Colors.white.withValues(alpha: 0.2),
                   AppColors.accent,
-                  v,
+                  _anims[i].value,
                 ),
               ),
             );
@@ -369,4 +303,3 @@ class _AnimatedDotsState extends State<_AnimatedDots>
     );
   }
 }
-

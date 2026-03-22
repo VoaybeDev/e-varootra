@@ -3,31 +3,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/user_model.dart';
 import '../../core/services/auth_service.dart';
 
-// Etat de session
 class AuthState {
   final UserModel? user;
   final bool isLoading;
   final String? error;
+  final bool isPending;
 
   const AuthState({
     this.user,
     this.isLoading = false,
     this.error,
+    this.isPending = false,
   });
 
-  bool get isAuthenticated => user != null;
+  bool get isAuthenticated => user != null && !isPending;
 
   AuthState copyWith({
     UserModel? user,
     bool? isLoading,
     String? error,
-    bool clearUser = false,
+    bool? isPending,
     bool clearError = false,
+    bool clearUser = false,
   }) {
     return AuthState(
       user: clearUser ? null : user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : error ?? this.error,
+      isPending: isPending ?? this.isPending,
     );
   }
 }
@@ -37,25 +40,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   AuthNotifier(this._authService) : super(const AuthState());
 
-  // Connexion
   Future<bool> login(String pseudo, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final user = await _authService.login(pseudo, password);
-      if (user == null) {
-        state = state.copyWith(isLoading: false, error: 'Identifiants incorrects');
+      final result = await _authService.login(pseudo, password);
+
+      if (result.isSuccess) {
+        state = AuthState(user: result.user);
+        return true;
+      } else if (result.isPending) {
+        state = AuthState(
+          isPending: true,
+          error: result.error,
+        );
+        return false;
+      } else {
+        state = state.copyWith(
+            isLoading: false, error: result.error);
         return false;
       }
-      await _authService.saveSession(user.id);
-      state = AuthState(user: user);
-      return true;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       return false;
     }
   }
 
-  // Inscription
   Future<bool> register({
     required String nomComplet,
     required String pseudo,
@@ -63,13 +72,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final user = await _authService.register(
+      final result = await _authService.register(
         nomComplet: nomComplet,
         pseudo: pseudo,
         password: password,
       );
-      if (user == null) {
-        state = state.copyWith(isLoading: false, error: 'Ce pseudo est deja utilise');
+      if (!result.isSuccess) {
+        state = state.copyWith(isLoading: false, error: result.error);
         return false;
       }
       state = state.copyWith(isLoading: false);
@@ -80,40 +89,72 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Restaurer session
-  Future<void> restoreSession() async {
-    state = state.copyWith(isLoading: true);
+  Future<bool> createAdmin({
+    required String nomComplet,
+    required String pseudo,
+    required String password,
+  }) async {
+    if (state.user == null || !state.user!.estSuperuser) return false;
+    state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final userId = await _authService.getSavedUserId();
-      if (userId != null) {
-        final user = await _authService.getUserById(userId);
-        state = AuthState(user: user);
-      } else {
-        state = const AuthState();
-      }
-    } catch (_) {
-      state = const AuthState();
+      final result = await _authService.createAdmin(
+        nomComplet: nomComplet,
+        pseudo: pseudo,
+        password: password,
+        createdBy: state.user!,
+      );
+      state = state.copyWith(isLoading: false);
+      return result.isSuccess;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
     }
   }
 
-// Deconnexion
+  Future<void> approveUser(int userId) async {
+    if (state.user == null || !state.user!.estAdmin) return;
+    await _authService.approveUser(userId, state.user!);
+    ref_pendingUsers?.call();
+  }
+
+  Future<void> rejectUser(int userId) async {
+    if (state.user == null || !state.user!.estAdmin) return;
+    await _authService.rejectUser(userId, state.user!);
+    ref_pendingUsers?.call();
+  }
+
+  VoidCallback? ref_pendingUsers;
+
   Future<void> logout() async {
     await _authService.logout();
     state = const AuthState();
   }
 
-  // Effacer erreur
   void clearError() {
     state = state.copyWith(clearError: true);
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+typedef VoidCallback = void Function();
+
+final authProvider =
+StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final service = ref.watch(authServiceProvider);
   return AuthNotifier(service);
 });
 
-// Provider utilisateur courant
 final currentUserProvider = Provider<UserModel?>((ref) {
   return ref.watch(authProvider).user;
+});
+
+// Provider utilisateurs en attente
+final pendingUsersProvider = FutureProvider<List<UserModel>>((ref) async {
+  final service = ref.watch(authServiceProvider);
+  return service.getPendingUsers();
+});
+
+// Provider tous les utilisateurs approuves
+final approvedUsersProvider = FutureProvider<List<UserModel>>((ref) async {
+  final service = ref.watch(authServiceProvider);
+  return service.getApprovedUsers();
 });

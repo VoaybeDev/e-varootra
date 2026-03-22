@@ -75,6 +75,16 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
   double get _restant =>
       (_total - _paiementInitial).clamp(0.0, double.infinity);
 
+  // Detecte si la facture genere une dette
+  bool get _aUneDette => _paiementInitial < _total;
+
+  // Verifie si on peut enregistrer
+  bool get _peutEnregistrer {
+    if (_selectedClient == null) return false;
+    if (_aUneDette && !_selectedClient!.estVerifie) return false;
+    return true;
+  }
+
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -103,16 +113,6 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
       return;
     }
 
-    // Verification CIN + Photo CIN
-    if (!_selectedClient!.estVerifie) {
-      AppToast.show(
-        context,
-        'Ce client doit avoir un CIN et une Photo CIN avant de pouvoir enregistrer une dette. Modifiez le client d\'abord.',
-        type: ToastType.error,
-      );
-      return;
-    }
-
     final validLines = _lines
         .where((l) => l.productUnit != null && l.quantite > 0)
         .toList();
@@ -120,6 +120,16 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
     if (validLines.isEmpty) {
       AppToast.show(context, 'Ajoutez au moins un produit',
           type: ToastType.error);
+      return;
+    }
+
+    // CIN requis SEULEMENT si la facture genere une dette
+    if (_aUneDette && !_selectedClient!.estVerifie) {
+      AppToast.show(
+        context,
+        'CIN et Photo CIN requis pour enregistrer une dette. Si le client paie tout maintenant, aucun CIN n\'est necessaire.',
+        type: ToastType.error,
+      );
       return;
     }
 
@@ -251,6 +261,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Client
                       Expanded(
                         child: Column(
                           crossAxisAlignment:
@@ -277,75 +288,21 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                     onChanged: (c) {
                                       setState(() {
                                         _selectedClient = c;
+                                        // Reset paiement si client change
+                                        if (_paiementTotal) {
+                                          _paiementTotal = false;
+                                          _paiementInitial = 0;
+                                        }
                                       });
                                     },
                                   ),
                             ),
-                            // Avertissement CIN manquant
-                            if (_selectedClient != null &&
-                                !_selectedClient!.estVerifie)
-                              Container(
-                                margin: const EdgeInsets.only(top: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.badgeDangerBg,
-                                  borderRadius:
-                                  BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color:
-                                      AppColors.badgeDangerBorder),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                        Icons.warning_amber_outlined,
-                                        size: 12,
-                                        color: AppColors.danger),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        'CIN et Photo CIN manquants - Impossible d\'enregistrer',
-                                        style: AppTextStyles.caption
-                                            .copyWith(
-                                            color:
-                                            AppColors.danger),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (_selectedClient != null &&
-                                _selectedClient!.estVerifie)
-                              Container(
-                                margin: const EdgeInsets.only(top: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.badgeSuccessBg,
-                                  borderRadius:
-                                  BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: AppColors
-                                          .badgeSuccessBorder),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                        Icons.verified_outlined,
-                                        size: 12,
-                                        color: AppColors.success),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Client verifie',
-                                      style: AppTextStyles.caption
-                                          .copyWith(
-                                          color:
-                                          AppColors.success),
-                                    ),
-                                  ],
-                                ),
-                              ),
+
+                            // Badge statut client dynamique
+                            if (_selectedClient != null) ...[
+                              const SizedBox(height: 6),
+                              _buildClientStatusBadge(),
+                            ],
                           ],
                         ),
                       ),
@@ -398,7 +355,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
 
                   const SizedBox(height: 18),
 
-                  // Produits
+                  // Lignes produits
                   Row(
                     children: [
                       Expanded(
@@ -413,8 +370,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                           decoration: BoxDecoration(
                             color: AppColors.bgCardHover,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                                color: AppColors.border),
+                            border:
+                            Border.all(color: AppColors.border),
                           ),
                           child: Row(
                             children: [
@@ -517,7 +474,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                   color: AppColors.success),
                             ),
                             const Spacer(),
-                            // Bouton "Payer tout"
+                            // Bouton payer tout
                             GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -541,23 +498,40 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                         : AppColors.border,
                                   ),
                                 ),
-                                child: Text(
-                                  _paiementTotal
-                                      ? 'Tout paye'
-                                      : 'Payer tout',
-                                  style: AppTextStyles.caption
-                                      .copyWith(
-                                    color: _paiementTotal
-                                        ? Colors.white
-                                        : AppColors.textMuted,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _paiementTotal
+                                          ? Icons.check_circle_outline
+                                          : Icons.payments_outlined,
+                                      size: 12,
+                                      color: _paiementTotal
+                                          ? Colors.white
+                                          : AppColors.textMuted,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _paiementTotal
+                                          ? 'Tout paye'
+                                          : 'Payer tout',
+                                      style:
+                                      AppTextStyles.caption.copyWith(
+                                        color: _paiementTotal
+                                            ? Colors.white
+                                            : AppColors.textMuted,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
                           ],
                         ),
+
                         const SizedBox(height: 10),
+
                         Row(
                           children: [
                             Expanded(
@@ -569,17 +543,20 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                       style: AppTextStyles.caption),
                                   const SizedBox(height: 6),
                                   TextFormField(
-                                    key: ValueKey(_paiementTotal),
+                                    key: ValueKey(
+                                        '${_paiementTotal}_$_total'),
                                     initialValue: _paiementInitial
                                         .toStringAsFixed(0),
                                     keyboardType:
                                     TextInputType.number,
                                     readOnly: _paiementTotal,
                                     style: AppTextStyles.input,
-                                    onChanged: (v) => setState(() {
-                                      _paiementInitial =
-                                          double.tryParse(v) ?? 0;
-                                    }),
+                                    onChanged: (v) =>
+                                        setState(() {
+                                          _paiementInitial =
+                                              (double.tryParse(v) ?? 0)
+                                                  .clamp(0.0, _total);
+                                        }),
                                     decoration: InputDecoration(
                                       contentPadding:
                                       const EdgeInsets.symmetric(
@@ -604,8 +581,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 13),
+                                        horizontal: 12, vertical: 13),
                                     decoration: BoxDecoration(
                                       color: AppColors.inputBg,
                                       borderRadius:
@@ -616,8 +592,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                     ),
                                     child: Text(
                                       AppFormatters.currency(_restant),
-                                      style:
-                                      AppTextStyles.input.copyWith(
+                                      style: AppTextStyles.input
+                                          .copyWith(
                                         color: _restant > 0
                                             ? AppColors.warning
                                             : AppColors.success,
@@ -630,6 +606,46 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                             ),
                           ],
                         ),
+
+                        // Info achat comptant vs dette
+                        if (_total > 0) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _aUneDette
+                                  ? AppColors.badgeWarningBg
+                                  : AppColors.badgeSuccessBg,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _aUneDette
+                                      ? Icons.schedule_outlined
+                                      : Icons.check_circle_outline,
+                                  size: 12,
+                                  color: _aUneDette
+                                      ? AppColors.warning
+                                      : AppColors.success,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _aUneDette
+                                      ? 'Dette enregistree - CIN requis'
+                                      : 'Achat comptant - aucune dette',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: _aUneDette
+                                        ? AppColors.warning
+                                        : AppColors.success,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -639,18 +655,127 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                   GradientButton.orange(
                     label: 'Enregistrer la facture',
                     icon: Icons.save_outlined,
-                    onPressed: (_isLoading ||
-                        (_selectedClient != null &&
-                            !_selectedClient!.estVerifie))
-                        ? null
-                        : _save,
+                    onPressed:
+                    (_isLoading || !_peutEnregistrer) ? null : _save,
                     fullWidth: true,
                     size: GradientButtonSize.large,
                     isLoading: _isLoading,
                   ),
+
+                  // Message si bouton desactive a cause du CIN
+                  if (_selectedClient != null &&
+                      _aUneDette &&
+                      !_selectedClient!.estVerifie) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.badgeDangerBg,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: AppColors.badgeDangerBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline,
+                              size: 14, color: AppColors.danger),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Modifiez ce client pour ajouter son CIN et sa Photo CIN, ou faites payer tout maintenant.',
+                              style: AppTextStyles.caption
+                                  .copyWith(color: AppColors.danger),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Badge dynamique selon etat client et si c'est une dette
+  Widget _buildClientStatusBadge() {
+    if (_selectedClient == null) return const SizedBox.shrink();
+
+    // Achat comptant - pas de CIN requis
+    if (!_aUneDette) {
+      return Container(
+        padding:
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.badgeSuccessBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.badgeSuccessBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.payments_outlined,
+                size: 12, color: AppColors.success),
+            const SizedBox(width: 6),
+            Text(
+              'Achat comptant - CIN non requis',
+              style: AppTextStyles.caption
+                  .copyWith(color: AppColors.success),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Dette - CIN manquant
+    if (!_selectedClient!.estVerifie) {
+      return Container(
+        padding:
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.badgeDangerBg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.badgeDangerBorder),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_outlined,
+                size: 12, color: AppColors.danger),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Dette detectee - CIN + Photo CIN manquants',
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.danger),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Dette - client verifie
+    return Container(
+      padding:
+      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.badgeSuccessBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.badgeSuccessBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.verified_outlined,
+              size: 12, color: AppColors.success),
+          const SizedBox(width: 6),
+          Text(
+            'Client verifie - dette autorisee',
+            style: AppTextStyles.caption
+                .copyWith(color: AppColors.success),
           ),
         ],
       ),
@@ -687,6 +812,7 @@ class _InvoiceLineWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Produit
           Expanded(
             flex: 3,
             child: _DropdownField<ProductUnitModel>(
@@ -700,7 +826,10 @@ class _InvoiceLineWidget extends StatelessWidget {
               },
             ),
           ),
+
           const SizedBox(width: 8),
+
+          // Prix (affichage readonly)
           Expanded(
             flex: 2,
             child: Container(
@@ -716,11 +845,15 @@ class _InvoiceLineWidget extends StatelessWidget {
                     ? AppFormatters.currency(
                     line.productUnit!.prixUnitaire)
                     : '-',
-                style: AppTextStyles.input.copyWith(fontSize: 13),
+                style: AppTextStyles.input.copyWith(fontSize: 12),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
+
           const SizedBox(width: 8),
+
+          // Quantite
           SizedBox(
             width: 60,
             child: TextFormField(
@@ -738,7 +871,10 @@ class _InvoiceLineWidget extends StatelessWidget {
               ),
             ),
           ),
+
           const SizedBox(width: 8),
+
+          // Supprimer ligne
           GestureDetector(
             onTap: onRemove,
             child: Opacity(
@@ -802,8 +938,7 @@ class _DropdownField<T> extends StatelessWidget {
             child: Text(
               itemLabel(item),
               overflow: TextOverflow.ellipsis,
-              style:
-              AppTextStyles.input.copyWith(fontSize: 14),
+              style: AppTextStyles.input.copyWith(fontSize: 14),
             ),
           ))
               .toList(),

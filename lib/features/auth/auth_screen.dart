@@ -22,12 +22,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabCtrl;
 
-  // Login controllers
   final _loginPseudoCtrl = TextEditingController();
   final _loginPasswordCtrl = TextEditingController();
   final _loginFormKey = GlobalKey<FormState>();
 
-  // Register controllers
   final _regNomCtrl = TextEditingController();
   final _regPseudoCtrl = TextEditingController();
   final _regPasswordCtrl = TextEditingController();
@@ -75,9 +73,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       password: _regPasswordCtrl.text,
     );
     if (ok && mounted) {
-      setState(() => _successMessage = 'Compte cree ! Connectez-vous');
+      setState(() {
+        _successMessage =
+        'Compte cree ! En attente d\'approbation par un administrateur.';
+      });
       _tabCtrl.animateTo(0);
-      _loginPseudoCtrl.text = _regPseudoCtrl.text.trim();
     }
   }
 
@@ -89,12 +89,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       backgroundColor: AppColors.bgDeep,
       body: Stack(
         children: [
-          // Fond gradient
           Container(
-            decoration: const BoxDecoration(gradient: AppGradients.authBg),
-          ),
-
-          // Lueur gauche
+              decoration:
+              const BoxDecoration(gradient: AppGradients.authBg)),
           Positioned(
             top: -60,
             left: -60,
@@ -105,18 +102,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.accent.withOpacity(0.08),
+                    AppColors.accent.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                 ),
               ),
             ),
           ),
-
-          // Contenu
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 20),
               child: Column(
                 children: [
                   const SizedBox(height: 20),
@@ -130,7 +126,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.35),
+                          color: AppColors.accent.withValues(alpha: 0.35),
                           blurRadius: 36,
                           offset: const Offset(0, 12),
                         ),
@@ -150,7 +146,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   GradientText(
                     'E-VAROOTRA',
                     gradient: AppGradients.brand,
-                    style: AppTextStyles.displayLarge.copyWith(fontSize: 26),
+                    style: AppTextStyles.displayLarge
+                        .copyWith(fontSize: 26),
                   ),
 
                   const SizedBox(height: 4),
@@ -162,6 +159,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                   const SizedBox(height: 32),
 
+                  // Message en attente d'approbation
+                  if (authState.isPending)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.badgeWarningBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                            color: AppColors.badgeWarningBorder),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.hourglass_empty_outlined,
+                              color: AppColors.warning, size: 32),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Compte en attente',
+                            style: AppTextStyles.headlineSmall.copyWith(
+                                color: AppColors.warning),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Votre compte a ete cree avec succes. Un administrateur doit approuver votre acces avant que vous puissiez vous connecter.',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.warning,
+                              fontSize: 13,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+
                   // Carte auth
                   Container(
                     decoration: BoxDecoration(
@@ -170,7 +201,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.black.withValues(alpha: 0.5),
                           blurRadius: 60,
                           offset: const Offset(0, 20),
                         ),
@@ -178,42 +209,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     ),
                     child: Column(
                       children: [
-                        // Message succes
+                        // Message succes inscription
                         if (_successMessage != null)
                           Container(
-                            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
+                            margin: const EdgeInsets.fromLTRB(
+                                20, 20, 20, 0),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.badgeSuccessBg,
+                              color: AppColors.badgeWarningBg,
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                  color: AppColors.badgeSuccessBorder),
+                                  color: AppColors.badgeWarningBorder),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.check_circle_outline,
-                                    color: AppColors.success, size: 16),
+                                const Icon(
+                                    Icons.hourglass_empty_outlined,
+                                    color: AppColors.warning,
+                                    size: 16),
                                 const SizedBox(width: 8),
-                                Text(
-                                  _successMessage!,
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: AppColors.success),
+                                Expanded(
+                                  child: Text(
+                                    _successMessage!,
+                                    style: AppTextStyles.bodySmall
+                                        .copyWith(
+                                        color: AppColors.warning),
+                                  ),
                                 ),
                               ],
                             ),
                           ),
 
                         // Message erreur
-                        if (authState.error != null)
+                        if (authState.error != null && !authState.isPending)
                           Container(
-                            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                            margin: const EdgeInsets.fromLTRB(
+                                20, 20, 20, 0),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 11,
-                            ),
+                                horizontal: 14, vertical: 11),
                             decoration: BoxDecoration(
                               color: AppColors.badgeDangerBg,
                               borderRadius: BorderRadius.circular(10),
@@ -229,7 +262,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                   child: Text(
                                     authState.error!,
                                     style: AppTextStyles.bodySmall
-                                        .copyWith(color: AppColors.danger),
+                                        .copyWith(
+                                        color: AppColors.danger),
                                   ),
                                 ),
                               ],
@@ -238,7 +272,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                         // Onglets
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                          padding: const EdgeInsets.fromLTRB(
+                              20, 20, 20, 0),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -254,7 +289,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                               indicatorSize: TabBarIndicatorSize.tab,
                               dividerColor: Colors.transparent,
                               labelStyle: AppTextStyles.labelLarge,
-                              unselectedLabelStyle: AppTextStyles.labelMedium,
+                              unselectedLabelStyle:
+                              AppTextStyles.labelMedium,
                               labelColor: Colors.white,
                               unselectedLabelColor: AppColors.textMuted,
                               tabs: const [
@@ -265,35 +301,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           ),
                         ),
 
-                        // Formulaires
                         SizedBox(
-                          height: 320,
+                          height: 340,
                           child: TabBarView(
                             controller: _tabCtrl,
                             children: [
-                              // Login
                               _LoginForm(
                                 formKey: _loginFormKey,
                                 pseudoCtrl: _loginPseudoCtrl,
                                 passwordCtrl: _loginPasswordCtrl,
                                 passwordVisible: _loginPasswordVisible,
-                                onTogglePassword: () => setState(
-                                        () => _loginPasswordVisible =
-                                    !_loginPasswordVisible),
+                                onTogglePassword: () => setState(() =>
+                                _loginPasswordVisible =
+                                !_loginPasswordVisible),
                                 onSubmit: _login,
                                 isLoading: authState.isLoading,
                               ),
-
-                              // Register
                               _RegisterForm(
                                 formKey: _regFormKey,
                                 nomCtrl: _regNomCtrl,
                                 pseudoCtrl: _regPseudoCtrl,
                                 passwordCtrl: _regPasswordCtrl,
                                 passwordVisible: _regPasswordVisible,
-                                onTogglePassword: () => setState(
-                                        () => _regPasswordVisible =
-                                    !_regPasswordVisible),
+                                onTogglePassword: () => setState(() =>
+                                _regPasswordVisible =
+                                !_regPasswordVisible),
                                 onSubmit: _register,
                                 isLoading: authState.isLoading,
                               ),
@@ -306,11 +338,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                   const SizedBox(height: 16),
 
-                  // Hint demo
-                  Text(
-                    'Demo : admin / 1234',
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textFaint,
+                  // Note inscription
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline,
+                            size: 14, color: AppColors.textFaint),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Les nouveaux comptes necesitent l\'approbation d\'un administrateur avant d\'etre actives.',
+                            style: AppTextStyles.caption,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

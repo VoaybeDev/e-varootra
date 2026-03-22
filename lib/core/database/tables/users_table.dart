@@ -5,5 +5,10 @@ class Users extends Table {
   TextColumn get nomComplet => text().withLength(min: 2, max: 200)();
   TextColumn get pseudo => text().withLength(min: 3, max: 50).unique()();
   TextColumn get motDePasseHash => text()();
+  // role: superuser | admin | utilisateur
+  TextColumn get role => text().withDefault(const Constant('utilisateur'))();
+  // approuve: superuser et admin sont approuves par defaut
+  // utilisateur doit attendre approbation admin
+  BoolColumn get approuve => boolean().withDefault(const Constant(false))();
   DateTimeColumn get dateCreation => dateTime().withDefault(currentDateAndTime)();
 }

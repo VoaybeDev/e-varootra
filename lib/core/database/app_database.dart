@@ -42,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -53,24 +53,37 @@ class AppDatabase extends _$AppDatabase {
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
-          // Migration v1 -> v2 : ajout CIN et photos clients
           await m.addColumn(clients, clients.cin);
           await m.addColumn(clients, clients.photoCin);
           await m.addColumn(clients, clients.photo);
+        }
+        if (from < 3) {
+          await m.addColumn(users, users.role);
+          await m.addColumn(users, users.approuve);
+          // Mettre a jour les utilisateurs existants comme approuves
+          await customStatement(
+              "UPDATE users SET role = 'superuser', approuve = 1 WHERE id = 1");
+          await customStatement(
+              "UPDATE users SET role = 'utilisateur', approuve = 1 WHERE id != 1");
         }
       },
     );
   }
 
   Future<void> _seedInitialData() async {
+    // Superutilisateur - Developpeur (VOUS)
+    // Changez pseudo et mot de passe selon votre choix
     await into(users).insert(
       UsersCompanion.insert(
-        nomComplet: 'Administrateur',
-        pseudo: 'admin',
-        motDePasseHash: _hashPassword('1234'),
+        nomComplet: 'VoaybeDev',
+        pseudo: 'voaybe',
+        motDePasseHash: _hashPassword('voaybe2026'),
+        role: const Value('superuser'),
+        approuve: const Value(true),
       ),
     );
 
+    // Unites par defaut
     final unitesDefaut = [
       UnitsCompanion.insert(nom: 'Kilogramme', symbole: const Value('kg')),
       UnitsCompanion.insert(nom: 'Gramme', symbole: const Value('g')),

@@ -41,6 +41,23 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
   late final GeneratedColumn<String> motDePasseHash = GeneratedColumn<String>(
       'mot_de_passe_hash', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('utilisateur'));
+  static const VerificationMeta _approuveMeta =
+      const VerificationMeta('approuve');
+  @override
+  late final GeneratedColumn<bool> approuve = GeneratedColumn<bool>(
+      'approuve', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("approuve" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _dateCreationMeta =
       const VerificationMeta('dateCreation');
   @override
@@ -51,7 +68,7 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       defaultValue: currentDateAndTime);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, nomComplet, pseudo, motDePasseHash, dateCreation];
+      [id, nomComplet, pseudo, motDePasseHash, role, approuve, dateCreation];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -87,6 +104,14 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     } else if (isInserting) {
       context.missing(_motDePasseHashMeta);
     }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
+    if (data.containsKey('approuve')) {
+      context.handle(_approuveMeta,
+          approuve.isAcceptableOrUnknown(data['approuve']!, _approuveMeta));
+    }
     if (data.containsKey('date_creation')) {
       context.handle(
           _dateCreationMeta,
@@ -110,6 +135,10 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
           .read(DriftSqlType.string, data['${effectivePrefix}pseudo'])!,
       motDePasseHash: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}mot_de_passe_hash'])!,
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
+      approuve: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}approuve'])!,
       dateCreation: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}date_creation'])!,
     );
@@ -126,12 +155,16 @@ class User extends DataClass implements Insertable<User> {
   final String nomComplet;
   final String pseudo;
   final String motDePasseHash;
+  final String role;
+  final bool approuve;
   final DateTime dateCreation;
   const User(
       {required this.id,
       required this.nomComplet,
       required this.pseudo,
       required this.motDePasseHash,
+      required this.role,
+      required this.approuve,
       required this.dateCreation});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -140,6 +173,8 @@ class User extends DataClass implements Insertable<User> {
     map['nom_complet'] = Variable<String>(nomComplet);
     map['pseudo'] = Variable<String>(pseudo);
     map['mot_de_passe_hash'] = Variable<String>(motDePasseHash);
+    map['role'] = Variable<String>(role);
+    map['approuve'] = Variable<bool>(approuve);
     map['date_creation'] = Variable<DateTime>(dateCreation);
     return map;
   }
@@ -150,6 +185,8 @@ class User extends DataClass implements Insertable<User> {
       nomComplet: Value(nomComplet),
       pseudo: Value(pseudo),
       motDePasseHash: Value(motDePasseHash),
+      role: Value(role),
+      approuve: Value(approuve),
       dateCreation: Value(dateCreation),
     );
   }
@@ -162,6 +199,8 @@ class User extends DataClass implements Insertable<User> {
       nomComplet: serializer.fromJson<String>(json['nomComplet']),
       pseudo: serializer.fromJson<String>(json['pseudo']),
       motDePasseHash: serializer.fromJson<String>(json['motDePasseHash']),
+      role: serializer.fromJson<String>(json['role']),
+      approuve: serializer.fromJson<bool>(json['approuve']),
       dateCreation: serializer.fromJson<DateTime>(json['dateCreation']),
     );
   }
@@ -173,6 +212,8 @@ class User extends DataClass implements Insertable<User> {
       'nomComplet': serializer.toJson<String>(nomComplet),
       'pseudo': serializer.toJson<String>(pseudo),
       'motDePasseHash': serializer.toJson<String>(motDePasseHash),
+      'role': serializer.toJson<String>(role),
+      'approuve': serializer.toJson<bool>(approuve),
       'dateCreation': serializer.toJson<DateTime>(dateCreation),
     };
   }
@@ -182,12 +223,16 @@ class User extends DataClass implements Insertable<User> {
           String? nomComplet,
           String? pseudo,
           String? motDePasseHash,
+          String? role,
+          bool? approuve,
           DateTime? dateCreation}) =>
       User(
         id: id ?? this.id,
         nomComplet: nomComplet ?? this.nomComplet,
         pseudo: pseudo ?? this.pseudo,
         motDePasseHash: motDePasseHash ?? this.motDePasseHash,
+        role: role ?? this.role,
+        approuve: approuve ?? this.approuve,
         dateCreation: dateCreation ?? this.dateCreation,
       );
   User copyWithCompanion(UsersCompanion data) {
@@ -199,6 +244,8 @@ class User extends DataClass implements Insertable<User> {
       motDePasseHash: data.motDePasseHash.present
           ? data.motDePasseHash.value
           : this.motDePasseHash,
+      role: data.role.present ? data.role.value : this.role,
+      approuve: data.approuve.present ? data.approuve.value : this.approuve,
       dateCreation: data.dateCreation.present
           ? data.dateCreation.value
           : this.dateCreation,
@@ -212,14 +259,16 @@ class User extends DataClass implements Insertable<User> {
           ..write('nomComplet: $nomComplet, ')
           ..write('pseudo: $pseudo, ')
           ..write('motDePasseHash: $motDePasseHash, ')
+          ..write('role: $role, ')
+          ..write('approuve: $approuve, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, nomComplet, pseudo, motDePasseHash, dateCreation);
+  int get hashCode => Object.hash(
+      id, nomComplet, pseudo, motDePasseHash, role, approuve, dateCreation);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -228,6 +277,8 @@ class User extends DataClass implements Insertable<User> {
           other.nomComplet == this.nomComplet &&
           other.pseudo == this.pseudo &&
           other.motDePasseHash == this.motDePasseHash &&
+          other.role == this.role &&
+          other.approuve == this.approuve &&
           other.dateCreation == this.dateCreation);
 }
 
@@ -236,12 +287,16 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<String> nomComplet;
   final Value<String> pseudo;
   final Value<String> motDePasseHash;
+  final Value<String> role;
+  final Value<bool> approuve;
   final Value<DateTime> dateCreation;
   const UsersCompanion({
     this.id = const Value.absent(),
     this.nomComplet = const Value.absent(),
     this.pseudo = const Value.absent(),
     this.motDePasseHash = const Value.absent(),
+    this.role = const Value.absent(),
+    this.approuve = const Value.absent(),
     this.dateCreation = const Value.absent(),
   });
   UsersCompanion.insert({
@@ -249,6 +304,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     required String nomComplet,
     required String pseudo,
     required String motDePasseHash,
+    this.role = const Value.absent(),
+    this.approuve = const Value.absent(),
     this.dateCreation = const Value.absent(),
   })  : nomComplet = Value(nomComplet),
         pseudo = Value(pseudo),
@@ -258,6 +315,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     Expression<String>? nomComplet,
     Expression<String>? pseudo,
     Expression<String>? motDePasseHash,
+    Expression<String>? role,
+    Expression<bool>? approuve,
     Expression<DateTime>? dateCreation,
   }) {
     return RawValuesInsertable({
@@ -265,6 +324,8 @@ class UsersCompanion extends UpdateCompanion<User> {
       if (nomComplet != null) 'nom_complet': nomComplet,
       if (pseudo != null) 'pseudo': pseudo,
       if (motDePasseHash != null) 'mot_de_passe_hash': motDePasseHash,
+      if (role != null) 'role': role,
+      if (approuve != null) 'approuve': approuve,
       if (dateCreation != null) 'date_creation': dateCreation,
     });
   }
@@ -274,12 +335,16 @@ class UsersCompanion extends UpdateCompanion<User> {
       Value<String>? nomComplet,
       Value<String>? pseudo,
       Value<String>? motDePasseHash,
+      Value<String>? role,
+      Value<bool>? approuve,
       Value<DateTime>? dateCreation}) {
     return UsersCompanion(
       id: id ?? this.id,
       nomComplet: nomComplet ?? this.nomComplet,
       pseudo: pseudo ?? this.pseudo,
       motDePasseHash: motDePasseHash ?? this.motDePasseHash,
+      role: role ?? this.role,
+      approuve: approuve ?? this.approuve,
       dateCreation: dateCreation ?? this.dateCreation,
     );
   }
@@ -299,6 +364,12 @@ class UsersCompanion extends UpdateCompanion<User> {
     if (motDePasseHash.present) {
       map['mot_de_passe_hash'] = Variable<String>(motDePasseHash.value);
     }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
+    if (approuve.present) {
+      map['approuve'] = Variable<bool>(approuve.value);
+    }
     if (dateCreation.present) {
       map['date_creation'] = Variable<DateTime>(dateCreation.value);
     }
@@ -312,6 +383,8 @@ class UsersCompanion extends UpdateCompanion<User> {
           ..write('nomComplet: $nomComplet, ')
           ..write('pseudo: $pseudo, ')
           ..write('motDePasseHash: $motDePasseHash, ')
+          ..write('role: $role, ')
+          ..write('approuve: $approuve, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
         .toString();
@@ -3200,6 +3273,8 @@ typedef $$UsersTableCreateCompanionBuilder = UsersCompanion Function({
   required String nomComplet,
   required String pseudo,
   required String motDePasseHash,
+  Value<String> role,
+  Value<bool> approuve,
   Value<DateTime> dateCreation,
 });
 typedef $$UsersTableUpdateCompanionBuilder = UsersCompanion Function({
@@ -3207,6 +3282,8 @@ typedef $$UsersTableUpdateCompanionBuilder = UsersCompanion Function({
   Value<String> nomComplet,
   Value<String> pseudo,
   Value<String> motDePasseHash,
+  Value<String> role,
+  Value<bool> approuve,
   Value<DateTime> dateCreation,
 });
 
@@ -3279,6 +3356,12 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
   ColumnFilters<String> get motDePasseHash => $composableBuilder(
       column: $table.motDePasseHash,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get approuve => $composableBuilder(
+      column: $table.approuve, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => ColumnFilters(column));
@@ -3369,6 +3452,12 @@ class $$UsersTableOrderingComposer
       column: $table.motDePasseHash,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get approuve => $composableBuilder(
+      column: $table.approuve, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation,
       builder: (column) => ColumnOrderings(column));
@@ -3394,6 +3483,12 @@ class $$UsersTableAnnotationComposer
 
   GeneratedColumn<String> get motDePasseHash => $composableBuilder(
       column: $table.motDePasseHash, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
+
+  GeneratedColumn<bool> get approuve =>
+      $composableBuilder(column: $table.approuve, builder: (column) => column);
 
   GeneratedColumn<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => column);
@@ -3490,6 +3585,8 @@ class $$UsersTableTableManager extends RootTableManager<
             Value<String> nomComplet = const Value.absent(),
             Value<String> pseudo = const Value.absent(),
             Value<String> motDePasseHash = const Value.absent(),
+            Value<String> role = const Value.absent(),
+            Value<bool> approuve = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
               UsersCompanion(
@@ -3497,6 +3594,8 @@ class $$UsersTableTableManager extends RootTableManager<
             nomComplet: nomComplet,
             pseudo: pseudo,
             motDePasseHash: motDePasseHash,
+            role: role,
+            approuve: approuve,
             dateCreation: dateCreation,
           ),
           createCompanionCallback: ({
@@ -3504,6 +3603,8 @@ class $$UsersTableTableManager extends RootTableManager<
             required String nomComplet,
             required String pseudo,
             required String motDePasseHash,
+            Value<String> role = const Value.absent(),
+            Value<bool> approuve = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
               UsersCompanion.insert(
@@ -3511,6 +3612,8 @@ class $$UsersTableTableManager extends RootTableManager<
             nomComplet: nomComplet,
             pseudo: pseudo,
             motDePasseHash: motDePasseHash,
+            role: role,
+            approuve: approuve,
             dateCreation: dateCreation,
           ),
           withReferenceMapper: (p0) => p0
