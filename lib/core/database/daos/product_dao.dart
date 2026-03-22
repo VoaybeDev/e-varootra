@@ -140,8 +140,10 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
   }
 
   // Mettre a jour unite de produit
-  Future<bool> updateProductUnit(ProductUnitsCompanion companion) async {
-    return update(productUnits).replace(companion);
+  Future<void> updateProductUnit(ProductUnitsCompanion companion) async {
+    await (update(productUnits)
+      ..where((pu) => pu.id.equals(companion.id.value)))
+        .write(companion);
   }
 
   // Desactiver unite de produit

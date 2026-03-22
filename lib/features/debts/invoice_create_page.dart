@@ -41,17 +41,20 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
   void initState() {
     super.initState();
     _addLine();
-    // Preselection client
-    if (widget.preselectedClientId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // Forcer le rechargement des produits
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(allProductUnitsProvider);
+      if (widget.preselectedClientId != null) {
         final clients = ref.read(clientsNotifierProvider).value ?? [];
-        final client = clients.firstWhere(
-              (c) => c.id == widget.preselectedClientId,
-          orElse: () => clients.first,
-        );
-        setState(() => _selectedClient = client);
-      });
-    }
+        if (clients.isNotEmpty) {
+          final client = clients.firstWhere(
+                (c) => c.id == widget.preselectedClientId,
+            orElse: () => clients.first,
+          );
+          setState(() => _selectedClient = client);
+        }
+      }
+    });
   }
 
   void _addLine() {

@@ -294,6 +294,9 @@ class _MoreBottomSheet extends ConsumerWidget {
                 onTap: () async {
                   Navigator.pop(context);
                   await ref.read(authProvider.notifier).logout();
+                  if (context.mounted) {
+                    context.go('/auth');
+                  }
                 },
               ),
             ],

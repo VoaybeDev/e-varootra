@@ -148,6 +148,8 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
           await _db.productDao.updateProductUnit(
             ProductUnitsCompanion(
               id: Value(u.id!),
+              produitId: Value(productId),
+              uniteId: Value(existing.uniteId),
               prixUnitaire: Value(u.prix),
               dateModification: Value(DateTime.now()),
             ),
