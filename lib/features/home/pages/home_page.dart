@@ -13,6 +13,7 @@ import '../../../core/widgets/gradient_text.dart';
 import '../../../core/widgets/stat_card.dart';
 import '../../auth/auth_provider.dart';
 import '../../home/home_provider.dart';
+import '../../debts/debts_provider.dart';
 import '../../../core/widgets/app_header.dart';
 
 class HomePage extends ConsumerWidget {
@@ -29,6 +30,8 @@ class HomePage extends ConsumerWidget {
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(homeStatsProvider);
+        ref.invalidate(activeInvoicesByClientProvider);
+        ref.invalidate(paidInvoicesByClientProvider);
       },
       color: AppColors.accent,
       backgroundColor: AppColors.bgCard,
@@ -225,7 +228,8 @@ class _FinancialSummary extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppGradients.cardAccent,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderActive.withOpacity(0.3)),
+        border: Border.all(
+            color: AppColors.borderActive.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

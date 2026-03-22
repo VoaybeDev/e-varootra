@@ -14,8 +14,11 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/gradient_text.dart';
 import '../../core/widgets/search_field.dart';
+import '../archive/archive_provider.dart';
+import '../dashboard/dashboard_provider.dart';
 import '../debts/debts_provider.dart';
 import '../debts/invoice_create_page.dart';
+import '../home/home_provider.dart';
 
 class DebtsPage extends ConsumerStatefulWidget {
   const DebtsPage({super.key});
@@ -88,10 +91,10 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
                         .contains(_search.toLowerCase());
                   }).toList()
                     ..sort((a, b) {
-                      final totA = a.value.fold(
-                          0.0, (s, inv) => s + inv.montantRestant);
-                      final totB = b.value.fold(
-                          0.0, (s, inv) => s + inv.montantRestant);
+                      final totA =
+                      a.value.fold(0.0, (s, inv) => s + inv.montantRestant);
+                      final totB =
+                      b.value.fold(0.0, (s, inv) => s + inv.montantRestant);
                       return totB.compareTo(totA);
                     });
 
@@ -104,15 +107,16 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
                       iconColor: AppColors.success,
                       actionLabel:
                       _search.isEmpty ? 'Creer une facture' : null,
-                      onAction: _search.isEmpty
-                          ? () => _openCreate(context)
-                          : null,
+                      onAction:
+                      _search.isEmpty ? () => _openCreate(context) : null,
                     );
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () async =>
-                        ref.invalidate(activeInvoicesByClientProvider),
+                    onRefresh: () async {
+                      ref.invalidate(activeInvoicesByClientProvider);
+                      ref.invalidate(homeStatsProvider);
+                    },
                     color: AppColors.accent,
                     backgroundColor: AppColors.bgCard,
                     child: ListView.builder(
@@ -148,7 +152,19 @@ class _DebtsPageState extends ConsumerState<DebtsPage> {
       backgroundColor: Colors.transparent,
       useSafeArea: true,
       builder: (_) => InvoiceCreatePage(
-        onCreated: () => ref.invalidate(activeInvoicesByClientProvider),
+        onCreated: () {
+          // Invalider tous les providers concernes
+          ref.invalidate(activeInvoicesByClientProvider);
+          ref.invalidate(paidInvoicesByClientProvider);
+          ref.invalidate(archiveStatsProvider);
+          ref.invalidate(homeStatsProvider);
+          ref.invalidate(dashboardStatsProvider);
+          ref.invalidate(topClientsProvider);
+          ref.invalidate(topProductsProvider);
+          ref.invalidate(repartitionDettesProvider);
+          ref.invalidate(dailyPaymentsProvider);
+          ref.invalidate(vendeurStatsProvider);
+        },
       ),
     );
   }
@@ -195,8 +211,8 @@ class _ClientDebtCard extends StatelessWidget {
               child: Center(
                 child: Text(
                   AppFormatters.firstLetter(client.nomComplet),
-                  style: AppTextStyles.titleMedium.copyWith(color: Colors.white,
-                      fontSize: 16),
+                  style: AppTextStyles.titleMedium
+                      .copyWith(color: Colors.white, fontSize: 16),
                 ),
               ),
             ),
@@ -230,8 +246,8 @@ class _ClientDebtCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.badgeAccentBg,
                             borderRadius: BorderRadius.circular(100),
-                            border:
-                            Border.all(color: AppColors.badgeAccentBorder),
+                            border: Border.all(
+                                color: AppColors.badgeAccentBorder),
                           ),
                           child: Text(
                             '+${invoices.length - 2}',

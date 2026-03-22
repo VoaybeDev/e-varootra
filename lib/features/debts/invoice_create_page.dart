@@ -15,6 +15,8 @@ import '../../core/widgets/gradient_text.dart';
 import '../auth/auth_provider.dart';
 import '../clients/clients_provider.dart';
 import '../products/products_provider.dart';
+import '../archive/archive_provider.dart';
+import '../dashboard/dashboard_provider.dart';
 
 class InvoiceCreatePage extends ConsumerStatefulWidget {
   final int? preselectedClientId;
@@ -127,6 +129,18 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
       );
 
       if (mounted) {
+        // Invalider TOUS les providers concernes
+        ref.invalidate(activeInvoicesByClientProvider);
+        ref.invalidate(paidInvoicesByClientProvider);
+        ref.invalidate(archiveStatsProvider);
+        ref.invalidate(homeStatsProvider);
+        ref.invalidate(dashboardStatsProvider);
+        ref.invalidate(topClientsProvider);
+        ref.invalidate(topProductsProvider);
+        ref.invalidate(repartitionDettesProvider);
+        ref.invalidate(dailyPaymentsProvider);
+        ref.invalidate(vendeurStatsProvider);
+
         Navigator.pop(context);
         AppToast.show(context, 'Facture $numero enregistree');
         widget.onCreated?.call();
