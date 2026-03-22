@@ -86,16 +86,15 @@ class ClientsNotifier
     String? photo,
   }) async {
     try {
+      // Appel direct avec parametres explicites
       await _db.clientDao.updateClient(
-        ClientsCompanion(
-          id: Value(id),
-          nomComplet: Value(nomComplet),
-          telephone: Value(telephone),
-          adresse: Value(adresse),
-          cin: Value(cin),
-          photoCin: Value(photoCin),
-          photo: Value(photo),
-        ),
+        id: id,
+        nomComplet: nomComplet,
+        telephone: telephone,
+        adresse: adresse,
+        cin: cin,
+        photoCin: photoCin,
+        photo: photo,
       );
       await load();
       return null;
