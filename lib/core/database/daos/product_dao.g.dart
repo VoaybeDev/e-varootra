@@ -7,6 +7,5 @@ mixin _$ProductDaoMixin on DatabaseAccessor<AppDatabase> {
   $ProductsTable get products => attachedDatabase.products;
   $UnitsTable get units => attachedDatabase.units;
   $ProductUnitsTable get productUnits => attachedDatabase.productUnits;
-  $UsersTable get users => attachedDatabase.users;
   $PriceHistoryTable get priceHistory => attachedDatabase.priceHistory;
 }

@@ -2,85 +2,87 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/app_database.dart';
-import '../../core/database/tables/products_table.dart';
-import '../../core/database/tables/units_table.dart';
-import '../../core/database/tables/product_units_table.dart';
-import '../../core/database/tables/price_history_table.dart';
+import '../../core/database/daos/product_dao.dart';
 import '../../core/models/product_model.dart';
 import '../../core/models/product_unit_model.dart';
 import '../../core/models/unit_model.dart';
+import '../auth/auth_provider.dart';
 
-// Modele complet produit avec ses unites
+// Modele pour afficher produit avec ses unites
 class ProductWithUnits {
   final ProductModel product;
   final List<ProductUnitWithHistory> units;
 
-  const ProductWithUnits({required this.product, required this.units});
+  const ProductWithUnits({
+    required this.product,
+    required this.units,
+  });
 }
 
 class ProductUnitWithHistory {
-  final ProductUnitModel productUnit;
-  final List<PriceHistoryData> history;
+  final ProductUnitModel unit;
+  final List<PriceHistoryEntry> history;
 
   const ProductUnitWithHistory({
-    required this.productUnit,
+    required this.unit,
     required this.history,
   });
 }
 
-// Input pour creer/modifier un produit
-class ProductUnitInput {
-  final int? id;
-  final String label;
-  final double prix;
-
-  const ProductUnitInput({this.id, required this.label, required this.prix});
-}
-
-class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>> {
+class ProductsNotifier
+    extends StateNotifier<AsyncValue<List<ProductWithUnits>>> {
   final AppDatabase _db;
+  final Ref _ref;
 
-  ProductsNotifier(this._db) : super(const AsyncValue.loading()) {
+  ProductsNotifier(this._db, this._ref)
+      : super(const AsyncValue.loading()) {
     load();
   }
 
-  Future<void> load([String search = '']) async {
+  Future<void> load() async {
     try {
       state = const AsyncValue.loading();
-      final products = search.trim().isEmpty
-          ? await _db.productDao.getActiveProducts()
-          : await _db.productDao.searchProducts(search);
+      final products = await _db.productDao.getActiveProducts();
+      final List<ProductWithUnits> result = [];
 
-      final result = <ProductWithUnits>[];
-      for (final p in products) {
-        final pus = await _db.productDao.getProductUnits(p.id);
-        final unitsWithHistory = <ProductUnitWithHistory>[];
-        for (final pu in pus) {
-          final hist = await _db.productDao.getPriceHistory(pu.id);
-          // Enrichir avec les noms
-          final unit = await _db.productDao.getProductUnitById(pu.id);
+      for (final product in products) {
+        final units =
+        await _db.productDao.getProductUnits(product.id);
+        final List<ProductUnitWithHistory> unitsWithHistory = [];
+
+        for (final unit in units) {
+          final history =
+          await _db.productDao.getPriceHistory(unit.id);
           unitsWithHistory.add(ProductUnitWithHistory(
-            productUnit: unit ?? pu,
-            history: hist,
+            unit: unit,
+            history: history,
           ));
         }
-        result.add(ProductWithUnits(product: p, units: unitsWithHistory));
+
+        result.add(ProductWithUnits(
+          product: product,
+          units: unitsWithHistory,
+        ));
       }
+
       state = AsyncValue.data(result);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
 
+  // Recuperer le pseudo de l'utilisateur courant
+  String get _currentPseudo {
+    final user = _ref.read(currentUserProvider);
+    return user?.pseudo ?? 'inconnu';
+  }
+
   Future<String?> createProduct({
     required String nom,
-    required String description,
-    required List<ProductUnitInput> unitInputs,
-    required int userId,
+    String? description,
+    required List<({String uniteName, double prix})> units,
   }) async {
     try {
-      if (unitInputs.isEmpty) return 'Ajoutez au moins une unite';
-
       final productId = await _db.productDao.createProduct(
         ProductsCompanion(
           nom: Value(nom),
@@ -88,16 +90,37 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
         ),
       );
 
-      for (final u in unitInputs) {
-        // Creer l'unite
-        final unitId = await _db.productDao.createUnit(
-          UnitsCompanion.insert(nom: u.label, symbole: Value(u.label)),
-        );
+      final allUnits = await _db.productDao.getActiveUnits();
+
+      for (final entry in units) {
+        // Chercher ou creer l'unite
+        UnitModel? existingUnit;
+        try {
+          existingUnit = allUnits.firstWhere(
+                (u) =>
+            u.nom.toLowerCase() ==
+                entry.uniteName.toLowerCase(),
+          );
+        } catch (_) {}
+
+        int uniteId;
+        if (existingUnit != null) {
+          uniteId = existingUnit.id;
+        } else {
+          uniteId = await _db.productDao.createUnit(
+            UnitsCompanion(
+              nom: Value(entry.uniteName),
+              symbole: Value(entry.uniteName.toLowerCase()),
+            ),
+          );
+        }
+
         await _db.productDao.createProductUnit(
-          ProductUnitsCompanion.insert(
-            produitId: productId,
-            uniteId: unitId,
-            prixUnitaire: Value(u.prix),
+          ProductUnitsCompanion(
+            produitId: Value(productId),
+            uniteId: Value(uniteId),
+            prixUnitaire: Value(entry.prix),
+            dateModification: Value(DateTime.now()),
           ),
         );
       }
@@ -112,11 +135,11 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
   Future<String?> updateProduct({
     required int productId,
     required String nom,
-    required String description,
-    required List<ProductUnitInput> unitInputs,
-    required int userId,
+    String? description,
+    required List<({int? id, String uniteName, double prix})> units,
   }) async {
     try {
+      // Mettre a jour le produit
       await _db.productDao.updateProduct(
         ProductsCompanion(
           id: Value(productId),
@@ -125,55 +148,82 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
         ),
       );
 
-      final existingPUs = await _db.productDao.getProductUnits(productId);
+      final allUnits = await _db.productDao.getActiveUnits();
+      final existingUnits =
+      await _db.productDao.getProductUnits(productId);
+      final pseudo = _currentPseudo;
 
-      for (final u in unitInputs) {
-        if (u.id != null) {
-          // Modifier existant
-          final existing = existingPUs.firstWhere(
-                (pu) => pu.id == u.id,
-            orElse: () => existingPUs.first,
+      // IDs des unites a garder
+      final keptIds = units
+          .where((u) => u.id != null)
+          .map((u) => u.id!)
+          .toSet();
+
+      // Desactiver les unites supprimees
+      for (final existing in existingUnits) {
+        if (!keptIds.contains(existing.id)) {
+          await _db.productDao.deactivateProductUnit(existing.id);
+        }
+      }
+
+      for (final u in units) {
+        // Trouver ou creer l'unite
+        UnitModel? existingUnit;
+        try {
+          existingUnit = allUnits.firstWhere(
+                (un) =>
+            un.nom.toLowerCase() ==
+                u.uniteName.toLowerCase(),
           );
-          // Enregistrer historique si prix change
-          if (existing.prixUnitaire != u.prix && u.prix > 0) {
+        } catch (_) {}
+
+        int uniteId;
+        if (existingUnit != null) {
+          uniteId = existingUnit.id;
+        } else {
+          uniteId = await _db.productDao.createUnit(
+            UnitsCompanion(
+              nom: Value(u.uniteName),
+              symbole: Value(u.uniteName.toLowerCase()),
+            ),
+          );
+        }
+
+        if (u.id != null) {
+          // Mettre a jour une unite existante
+          final existing = existingUnits
+              .where((e) => e.id == u.id)
+              .firstOrNull;
+
+          if (existing != null && existing.prixUnitaire != u.prix) {
+            // Prix change - enregistrer dans l'historique AVEC pseudo
             await _db.productDao.createPriceHistory(
-              PriceHistoryCompanion.insert(
-                produitUniteId: u.id!,
-                ancienPrix: existing.prixUnitaire,
-                nouveauPrix: u.prix,
-                utilisateurId: userId,
-              ),
+              produitUniteId: u.id!,
+              ancienPrix: existing.prixUnitaire,
+              nouveauPrix: u.prix,
+              pseudo: pseudo,
             );
           }
+
           await _db.productDao.updateProductUnit(
             ProductUnitsCompanion(
               id: Value(u.id!),
               produitId: Value(productId),
-              uniteId: Value(existing.uniteId),
+              uniteId: Value(uniteId),
               prixUnitaire: Value(u.prix),
               dateModification: Value(DateTime.now()),
             ),
           );
         } else {
           // Nouvelle unite
-          final unitId = await _db.productDao.createUnit(
-            UnitsCompanion.insert(nom: u.label, symbole: Value(u.label)),
-          );
           await _db.productDao.createProductUnit(
-            ProductUnitsCompanion.insert(
-              produitId: productId,
-              uniteId: unitId,
+            ProductUnitsCompanion(
+              produitId: Value(productId),
+              uniteId: Value(uniteId),
               prixUnitaire: Value(u.prix),
+              dateModification: Value(DateTime.now()),
             ),
           );
-        }
-      }
-
-      // Desactiver les unites supprimees
-      final inputIds = unitInputs.where((u) => u.id != null).map((u) => u.id!).toSet();
-      for (final pu in existingPUs) {
-        if (!inputIds.contains(pu.id)) {
-          await _db.productDao.deactivateProductUnit(pu.id);
         }
       }
 
@@ -184,9 +234,14 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
     }
   }
 
-  Future<String?> deactivate(int id) async {
+  Future<String?> deleteProduct(int productId) async {
     try {
-      await _db.productDao.deactivateProduct(id);
+      final units =
+      await _db.productDao.getProductUnits(productId);
+      for (final unit in units) {
+        await _db.productDao.deactivateProductUnit(unit.id);
+      }
+      await _db.productDao.deactivateProduct(productId);
       await load();
       return null;
     } catch (e) {
@@ -195,20 +250,15 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
   }
 }
 
-final productsNotifierProvider =
-StateNotifierProvider<ProductsNotifier, AsyncValue<List<ProductWithUnits>>>((ref) {
+final productsNotifierProvider = StateNotifierProvider<ProductsNotifier,
+    AsyncValue<List<ProductWithUnits>>>((ref) {
   final db = ref.watch(appDatabaseProvider);
-  return ProductsNotifier(db);
+  return ProductsNotifier(db, ref);
 });
 
-// Toutes les combinaisons produit-unite pour la creation de facture
-final allProductUnitsProvider = FutureProvider<List<ProductUnitModel>>((ref) async {
+// Provider pour toutes les unites de produits (pour le dropdown facture)
+final allProductUnitsProvider =
+FutureProvider<List<ProductUnitModel>>((ref) async {
   final db = ref.watch(appDatabaseProvider);
   return db.productDao.getAllProductUnitsWithDetails();
-});
-
-// Unites globales
-final unitsProvider = FutureProvider<List<UnitModel>>((ref) async {
-  final db = ref.watch(appDatabaseProvider);
-  return db.productDao.getActiveUnits();
 });

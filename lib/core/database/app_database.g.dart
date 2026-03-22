@@ -1786,10 +1786,7 @@ class $PriceHistoryTable extends PriceHistory
   @override
   late final GeneratedColumn<int> produitUniteId = GeneratedColumn<int>(
       'produit_unite_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('REFERENCES product_units (id)'));
+      type: DriftSqlType.int, requiredDuringInsert: true);
   static const VerificationMeta _ancienPrixMeta =
       const VerificationMeta('ancienPrix');
   @override
@@ -1802,15 +1799,13 @@ class $PriceHistoryTable extends PriceHistory
   late final GeneratedColumn<double> nouveauPrix = GeneratedColumn<double>(
       'nouveau_prix', aliasedName, false,
       type: DriftSqlType.double, requiredDuringInsert: true);
-  static const VerificationMeta _utilisateurIdMeta =
-      const VerificationMeta('utilisateurId');
+  static const VerificationMeta _pseudoMeta = const VerificationMeta('pseudo');
   @override
-  late final GeneratedColumn<int> utilisateurId = GeneratedColumn<int>(
-      'utilisateur_id', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: true,
-      defaultConstraints:
-          GeneratedColumn.constraintIsAlways('REFERENCES users (id)'));
+  late final GeneratedColumn<String> pseudo = GeneratedColumn<String>(
+      'pseudo', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('?'));
   static const VerificationMeta _dateModificationMeta =
       const VerificationMeta('dateModification');
   @override
@@ -1820,14 +1815,8 @@ class $PriceHistoryTable extends PriceHistory
           requiredDuringInsert: false,
           defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns => [
-        id,
-        produitUniteId,
-        ancienPrix,
-        nouveauPrix,
-        utilisateurId,
-        dateModification
-      ];
+  List<GeneratedColumn> get $columns =>
+      [id, produitUniteId, ancienPrix, nouveauPrix, pseudo, dateModification];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1865,13 +1854,9 @@ class $PriceHistoryTable extends PriceHistory
     } else if (isInserting) {
       context.missing(_nouveauPrixMeta);
     }
-    if (data.containsKey('utilisateur_id')) {
-      context.handle(
-          _utilisateurIdMeta,
-          utilisateurId.isAcceptableOrUnknown(
-              data['utilisateur_id']!, _utilisateurIdMeta));
-    } else if (isInserting) {
-      context.missing(_utilisateurIdMeta);
+    if (data.containsKey('pseudo')) {
+      context.handle(_pseudoMeta,
+          pseudo.isAcceptableOrUnknown(data['pseudo']!, _pseudoMeta));
     }
     if (data.containsKey('date_modification')) {
       context.handle(
@@ -1896,8 +1881,8 @@ class $PriceHistoryTable extends PriceHistory
           .read(DriftSqlType.double, data['${effectivePrefix}ancien_prix'])!,
       nouveauPrix: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}nouveau_prix'])!,
-      utilisateurId: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}utilisateur_id'])!,
+      pseudo: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}pseudo'])!,
       dateModification: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}date_modification'])!,
     );
@@ -1915,14 +1900,14 @@ class PriceHistoryData extends DataClass
   final int produitUniteId;
   final double ancienPrix;
   final double nouveauPrix;
-  final int utilisateurId;
+  final String pseudo;
   final DateTime dateModification;
   const PriceHistoryData(
       {required this.id,
       required this.produitUniteId,
       required this.ancienPrix,
       required this.nouveauPrix,
-      required this.utilisateurId,
+      required this.pseudo,
       required this.dateModification});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1931,7 +1916,7 @@ class PriceHistoryData extends DataClass
     map['produit_unite_id'] = Variable<int>(produitUniteId);
     map['ancien_prix'] = Variable<double>(ancienPrix);
     map['nouveau_prix'] = Variable<double>(nouveauPrix);
-    map['utilisateur_id'] = Variable<int>(utilisateurId);
+    map['pseudo'] = Variable<String>(pseudo);
     map['date_modification'] = Variable<DateTime>(dateModification);
     return map;
   }
@@ -1942,7 +1927,7 @@ class PriceHistoryData extends DataClass
       produitUniteId: Value(produitUniteId),
       ancienPrix: Value(ancienPrix),
       nouveauPrix: Value(nouveauPrix),
-      utilisateurId: Value(utilisateurId),
+      pseudo: Value(pseudo),
       dateModification: Value(dateModification),
     );
   }
@@ -1955,7 +1940,7 @@ class PriceHistoryData extends DataClass
       produitUniteId: serializer.fromJson<int>(json['produitUniteId']),
       ancienPrix: serializer.fromJson<double>(json['ancienPrix']),
       nouveauPrix: serializer.fromJson<double>(json['nouveauPrix']),
-      utilisateurId: serializer.fromJson<int>(json['utilisateurId']),
+      pseudo: serializer.fromJson<String>(json['pseudo']),
       dateModification: serializer.fromJson<DateTime>(json['dateModification']),
     );
   }
@@ -1967,7 +1952,7 @@ class PriceHistoryData extends DataClass
       'produitUniteId': serializer.toJson<int>(produitUniteId),
       'ancienPrix': serializer.toJson<double>(ancienPrix),
       'nouveauPrix': serializer.toJson<double>(nouveauPrix),
-      'utilisateurId': serializer.toJson<int>(utilisateurId),
+      'pseudo': serializer.toJson<String>(pseudo),
       'dateModification': serializer.toJson<DateTime>(dateModification),
     };
   }
@@ -1977,14 +1962,14 @@ class PriceHistoryData extends DataClass
           int? produitUniteId,
           double? ancienPrix,
           double? nouveauPrix,
-          int? utilisateurId,
+          String? pseudo,
           DateTime? dateModification}) =>
       PriceHistoryData(
         id: id ?? this.id,
         produitUniteId: produitUniteId ?? this.produitUniteId,
         ancienPrix: ancienPrix ?? this.ancienPrix,
         nouveauPrix: nouveauPrix ?? this.nouveauPrix,
-        utilisateurId: utilisateurId ?? this.utilisateurId,
+        pseudo: pseudo ?? this.pseudo,
         dateModification: dateModification ?? this.dateModification,
       );
   PriceHistoryData copyWithCompanion(PriceHistoryCompanion data) {
@@ -1997,9 +1982,7 @@ class PriceHistoryData extends DataClass
           data.ancienPrix.present ? data.ancienPrix.value : this.ancienPrix,
       nouveauPrix:
           data.nouveauPrix.present ? data.nouveauPrix.value : this.nouveauPrix,
-      utilisateurId: data.utilisateurId.present
-          ? data.utilisateurId.value
-          : this.utilisateurId,
+      pseudo: data.pseudo.present ? data.pseudo.value : this.pseudo,
       dateModification: data.dateModification.present
           ? data.dateModification.value
           : this.dateModification,
@@ -2013,15 +1996,15 @@ class PriceHistoryData extends DataClass
           ..write('produitUniteId: $produitUniteId, ')
           ..write('ancienPrix: $ancienPrix, ')
           ..write('nouveauPrix: $nouveauPrix, ')
-          ..write('utilisateurId: $utilisateurId, ')
+          ..write('pseudo: $pseudo, ')
           ..write('dateModification: $dateModification')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, produitUniteId, ancienPrix, nouveauPrix,
-      utilisateurId, dateModification);
+  int get hashCode => Object.hash(
+      id, produitUniteId, ancienPrix, nouveauPrix, pseudo, dateModification);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2030,7 +2013,7 @@ class PriceHistoryData extends DataClass
           other.produitUniteId == this.produitUniteId &&
           other.ancienPrix == this.ancienPrix &&
           other.nouveauPrix == this.nouveauPrix &&
-          other.utilisateurId == this.utilisateurId &&
+          other.pseudo == this.pseudo &&
           other.dateModification == this.dateModification);
 }
 
@@ -2039,14 +2022,14 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
   final Value<int> produitUniteId;
   final Value<double> ancienPrix;
   final Value<double> nouveauPrix;
-  final Value<int> utilisateurId;
+  final Value<String> pseudo;
   final Value<DateTime> dateModification;
   const PriceHistoryCompanion({
     this.id = const Value.absent(),
     this.produitUniteId = const Value.absent(),
     this.ancienPrix = const Value.absent(),
     this.nouveauPrix = const Value.absent(),
-    this.utilisateurId = const Value.absent(),
+    this.pseudo = const Value.absent(),
     this.dateModification = const Value.absent(),
   });
   PriceHistoryCompanion.insert({
@@ -2054,18 +2037,17 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     required int produitUniteId,
     required double ancienPrix,
     required double nouveauPrix,
-    required int utilisateurId,
+    this.pseudo = const Value.absent(),
     this.dateModification = const Value.absent(),
   })  : produitUniteId = Value(produitUniteId),
         ancienPrix = Value(ancienPrix),
-        nouveauPrix = Value(nouveauPrix),
-        utilisateurId = Value(utilisateurId);
+        nouveauPrix = Value(nouveauPrix);
   static Insertable<PriceHistoryData> custom({
     Expression<int>? id,
     Expression<int>? produitUniteId,
     Expression<double>? ancienPrix,
     Expression<double>? nouveauPrix,
-    Expression<int>? utilisateurId,
+    Expression<String>? pseudo,
     Expression<DateTime>? dateModification,
   }) {
     return RawValuesInsertable({
@@ -2073,7 +2055,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
       if (produitUniteId != null) 'produit_unite_id': produitUniteId,
       if (ancienPrix != null) 'ancien_prix': ancienPrix,
       if (nouveauPrix != null) 'nouveau_prix': nouveauPrix,
-      if (utilisateurId != null) 'utilisateur_id': utilisateurId,
+      if (pseudo != null) 'pseudo': pseudo,
       if (dateModification != null) 'date_modification': dateModification,
     });
   }
@@ -2083,14 +2065,14 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
       Value<int>? produitUniteId,
       Value<double>? ancienPrix,
       Value<double>? nouveauPrix,
-      Value<int>? utilisateurId,
+      Value<String>? pseudo,
       Value<DateTime>? dateModification}) {
     return PriceHistoryCompanion(
       id: id ?? this.id,
       produitUniteId: produitUniteId ?? this.produitUniteId,
       ancienPrix: ancienPrix ?? this.ancienPrix,
       nouveauPrix: nouveauPrix ?? this.nouveauPrix,
-      utilisateurId: utilisateurId ?? this.utilisateurId,
+      pseudo: pseudo ?? this.pseudo,
       dateModification: dateModification ?? this.dateModification,
     );
   }
@@ -2110,8 +2092,8 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     if (nouveauPrix.present) {
       map['nouveau_prix'] = Variable<double>(nouveauPrix.value);
     }
-    if (utilisateurId.present) {
-      map['utilisateur_id'] = Variable<int>(utilisateurId.value);
+    if (pseudo.present) {
+      map['pseudo'] = Variable<String>(pseudo.value);
     }
     if (dateModification.present) {
       map['date_modification'] = Variable<DateTime>(dateModification.value);
@@ -2126,7 +2108,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
           ..write('produitUniteId: $produitUniteId, ')
           ..write('ancienPrix: $ancienPrix, ')
           ..write('nouveauPrix: $nouveauPrix, ')
-          ..write('utilisateurId: $utilisateurId, ')
+          ..write('pseudo: $pseudo, ')
           ..write('dateModification: $dateModification')
           ..write(')'))
         .toString();
@@ -3291,21 +3273,6 @@ final class $$UsersTableReferences
     extends BaseReferences<_$AppDatabase, $UsersTable, User> {
   $$UsersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static MultiTypedResultKey<$PriceHistoryTable, List<PriceHistoryData>>
-      _priceHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
-          db.priceHistory,
-          aliasName:
-              $_aliasNameGenerator(db.users.id, db.priceHistory.utilisateurId));
-
-  $$PriceHistoryTableProcessedTableManager get priceHistoryRefs {
-    final manager = $$PriceHistoryTableTableManager($_db, $_db.priceHistory)
-        .filter((f) => f.utilisateurId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_priceHistoryRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
   static MultiTypedResultKey<$DebtsTable, List<Debt>> _debtsRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.debts,
@@ -3365,27 +3332,6 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
 
   ColumnFilters<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => ColumnFilters(column));
-
-  Expression<bool> priceHistoryRefs(
-      Expression<bool> Function($$PriceHistoryTableFilterComposer f) f) {
-    final $$PriceHistoryTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.priceHistory,
-        getReferencedColumn: (t) => t.utilisateurId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PriceHistoryTableFilterComposer(
-              $db: $db,
-              $table: $db.priceHistory,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
 
   Expression<bool> debtsRefs(
       Expression<bool> Function($$DebtsTableFilterComposer f) f) {
@@ -3493,27 +3439,6 @@ class $$UsersTableAnnotationComposer
   GeneratedColumn<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => column);
 
-  Expression<T> priceHistoryRefs<T extends Object>(
-      Expression<T> Function($$PriceHistoryTableAnnotationComposer a) f) {
-    final $$PriceHistoryTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.priceHistory,
-        getReferencedColumn: (t) => t.utilisateurId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PriceHistoryTableAnnotationComposer(
-              $db: $db,
-              $table: $db.priceHistory,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
   Expression<T> debtsRefs<T extends Object>(
       Expression<T> Function($$DebtsTableAnnotationComposer a) f) {
     final $$DebtsTableAnnotationComposer composer = $composerBuilder(
@@ -3568,8 +3493,7 @@ class $$UsersTableTableManager extends RootTableManager<
     $$UsersTableUpdateCompanionBuilder,
     (User, $$UsersTableReferences),
     User,
-    PrefetchHooks Function(
-        {bool priceHistoryRefs, bool debtsRefs, bool paymentsRefs})> {
+    PrefetchHooks Function({bool debtsRefs, bool paymentsRefs})> {
   $$UsersTableTableManager(_$AppDatabase db, $UsersTable table)
       : super(TableManagerState(
           db: db,
@@ -3620,33 +3544,16 @@ class $$UsersTableTableManager extends RootTableManager<
               .map((e) =>
                   (e.readTable(table), $$UsersTableReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: (
-              {priceHistoryRefs = false,
-              debtsRefs = false,
-              paymentsRefs = false}) {
+          prefetchHooksCallback: ({debtsRefs = false, paymentsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
-                if (priceHistoryRefs) db.priceHistory,
                 if (debtsRefs) db.debts,
                 if (paymentsRefs) db.payments
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
                 return [
-                  if (priceHistoryRefs)
-                    await $_getPrefetchedData<User, $UsersTable,
-                            PriceHistoryData>(
-                        currentTable: table,
-                        referencedTable:
-                            $$UsersTableReferences._priceHistoryRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$UsersTableReferences(db, table, p0)
-                                .priceHistoryRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.utilisateurId == item.id),
-                        typedResults: items),
                   if (debtsRefs)
                     await $_getPrefetchedData<User, $UsersTable, Debt>(
                         currentTable: table,
@@ -3687,8 +3594,7 @@ typedef $$UsersTableProcessedTableManager = ProcessedTableManager<
     $$UsersTableUpdateCompanionBuilder,
     (User, $$UsersTableReferences),
     User,
-    PrefetchHooks Function(
-        {bool priceHistoryRefs, bool debtsRefs, bool paymentsRefs})>;
+    PrefetchHooks Function({bool debtsRefs, bool paymentsRefs})>;
 typedef $$ClientsTableCreateCompanionBuilder = ClientsCompanion Function({
   Value<int> id,
   required String nomComplet,
@@ -4518,21 +4424,6 @@ final class $$ProductUnitsTableReferences
         manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static MultiTypedResultKey<$PriceHistoryTable, List<PriceHistoryData>>
-      _priceHistoryRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.priceHistory,
-              aliasName: $_aliasNameGenerator(
-                  db.productUnits.id, db.priceHistory.produitUniteId));
-
-  $$PriceHistoryTableProcessedTableManager get priceHistoryRefs {
-    final manager = $$PriceHistoryTableTableManager($_db, $_db.priceHistory)
-        .filter((f) => f.produitUniteId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_priceHistoryRefsTable($_db));
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: cache));
-  }
-
   static MultiTypedResultKey<$DebtsTable, List<Debt>> _debtsRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.debts,
@@ -4609,27 +4500,6 @@ class $$ProductUnitsTableFilterComposer
                   $removeJoinBuilderFromRootComposer,
             ));
     return composer;
-  }
-
-  Expression<bool> priceHistoryRefs(
-      Expression<bool> Function($$PriceHistoryTableFilterComposer f) f) {
-    final $$PriceHistoryTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.priceHistory,
-        getReferencedColumn: (t) => t.produitUniteId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PriceHistoryTableFilterComposer(
-              $db: $db,
-              $table: $db.priceHistory,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
   }
 
   Expression<bool> debtsRefs(
@@ -4779,27 +4649,6 @@ class $$ProductUnitsTableAnnotationComposer
     return composer;
   }
 
-  Expression<T> priceHistoryRefs<T extends Object>(
-      Expression<T> Function($$PriceHistoryTableAnnotationComposer a) f) {
-    final $$PriceHistoryTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.id,
-        referencedTable: $db.priceHistory,
-        getReferencedColumn: (t) => t.produitUniteId,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$PriceHistoryTableAnnotationComposer(
-              $db: $db,
-              $table: $db.priceHistory,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return f(composer);
-  }
-
   Expression<T> debtsRefs<T extends Object>(
       Expression<T> Function($$DebtsTableAnnotationComposer a) f) {
     final $$DebtsTableAnnotationComposer composer = $composerBuilder(
@@ -4833,11 +4682,7 @@ class $$ProductUnitsTableTableManager extends RootTableManager<
     $$ProductUnitsTableUpdateCompanionBuilder,
     (ProductUnit, $$ProductUnitsTableReferences),
     ProductUnit,
-    PrefetchHooks Function(
-        {bool produitId,
-        bool uniteId,
-        bool priceHistoryRefs,
-        bool debtsRefs})> {
+    PrefetchHooks Function({bool produitId, bool uniteId, bool debtsRefs})> {
   $$ProductUnitsTableTableManager(_$AppDatabase db, $ProductUnitsTable table)
       : super(TableManagerState(
           db: db,
@@ -4887,16 +4732,10 @@ class $$ProductUnitsTableTableManager extends RootTableManager<
                   ))
               .toList(),
           prefetchHooksCallback: (
-              {produitId = false,
-              uniteId = false,
-              priceHistoryRefs = false,
-              debtsRefs = false}) {
+              {produitId = false, uniteId = false, debtsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [
-                if (priceHistoryRefs) db.priceHistory,
-                if (debtsRefs) db.debts
-              ],
+              explicitlyWatchedTables: [if (debtsRefs) db.debts],
               addJoins: <
                   T extends TableManagerState<
                       dynamic,
@@ -4935,18 +4774,6 @@ class $$ProductUnitsTableTableManager extends RootTableManager<
               },
               getPrefetchedDataCallback: (items) async {
                 return [
-                  if (priceHistoryRefs)
-                    await $_getPrefetchedData<ProductUnit, $ProductUnitsTable, PriceHistoryData>(
-                        currentTable: table,
-                        referencedTable: $$ProductUnitsTableReferences
-                            ._priceHistoryRefsTable(db),
-                        managerFromTypedResult: (p0) =>
-                            $$ProductUnitsTableReferences(db, table, p0)
-                                .priceHistoryRefs,
-                        referencedItemsForCurrentItem:
-                            (item, referencedItems) => referencedItems
-                                .where((e) => e.produitUniteId == item.id),
-                        typedResults: items),
                   if (debtsRefs)
                     await $_getPrefetchedData<ProductUnit, $ProductUnitsTable,
                             Debt>(
@@ -4978,15 +4805,14 @@ typedef $$ProductUnitsTableProcessedTableManager = ProcessedTableManager<
     $$ProductUnitsTableUpdateCompanionBuilder,
     (ProductUnit, $$ProductUnitsTableReferences),
     ProductUnit,
-    PrefetchHooks Function(
-        {bool produitId, bool uniteId, bool priceHistoryRefs, bool debtsRefs})>;
+    PrefetchHooks Function({bool produitId, bool uniteId, bool debtsRefs})>;
 typedef $$PriceHistoryTableCreateCompanionBuilder = PriceHistoryCompanion
     Function({
   Value<int> id,
   required int produitUniteId,
   required double ancienPrix,
   required double nouveauPrix,
-  required int utilisateurId,
+  Value<String> pseudo,
   Value<DateTime> dateModification,
 });
 typedef $$PriceHistoryTableUpdateCompanionBuilder = PriceHistoryCompanion
@@ -4995,44 +4821,9 @@ typedef $$PriceHistoryTableUpdateCompanionBuilder = PriceHistoryCompanion
   Value<int> produitUniteId,
   Value<double> ancienPrix,
   Value<double> nouveauPrix,
-  Value<int> utilisateurId,
+  Value<String> pseudo,
   Value<DateTime> dateModification,
 });
-
-final class $$PriceHistoryTableReferences extends BaseReferences<_$AppDatabase,
-    $PriceHistoryTable, PriceHistoryData> {
-  $$PriceHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $ProductUnitsTable _produitUniteIdTable(_$AppDatabase db) =>
-      db.productUnits.createAlias($_aliasNameGenerator(
-          db.priceHistory.produitUniteId, db.productUnits.id));
-
-  $$ProductUnitsTableProcessedTableManager get produitUniteId {
-    final $_column = $_itemColumn<int>('produit_unite_id')!;
-
-    final manager = $$ProductUnitsTableTableManager($_db, $_db.productUnits)
-        .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_produitUniteIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-
-  static $UsersTable _utilisateurIdTable(_$AppDatabase db) =>
-      db.users.createAlias(
-          $_aliasNameGenerator(db.priceHistory.utilisateurId, db.users.id));
-
-  $$UsersTableProcessedTableManager get utilisateurId {
-    final $_column = $_itemColumn<int>('utilisateur_id')!;
-
-    final manager = $$UsersTableTableManager($_db, $_db.users)
-        .filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_utilisateurIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-        manager.$state.copyWith(prefetchedData: [item]));
-  }
-}
 
 class $$PriceHistoryTableFilterComposer
     extends Composer<_$AppDatabase, $PriceHistoryTable> {
@@ -5046,55 +4837,22 @@ class $$PriceHistoryTableFilterComposer
   ColumnFilters<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get produitUniteId => $composableBuilder(
+      column: $table.produitUniteId,
+      builder: (column) => ColumnFilters(column));
+
   ColumnFilters<double> get ancienPrix => $composableBuilder(
       column: $table.ancienPrix, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<double> get nouveauPrix => $composableBuilder(
       column: $table.nouveauPrix, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get pseudo => $composableBuilder(
+      column: $table.pseudo, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification,
       builder: (column) => ColumnFilters(column));
-
-  $$ProductUnitsTableFilterComposer get produitUniteId {
-    final $$ProductUnitsTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.produitUniteId,
-        referencedTable: $db.productUnits,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ProductUnitsTableFilterComposer(
-              $db: $db,
-              $table: $db.productUnits,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$UsersTableFilterComposer get utilisateurId {
-    final $$UsersTableFilterComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.utilisateurId,
-        referencedTable: $db.users,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$UsersTableFilterComposer(
-              $db: $db,
-              $table: $db.users,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
 }
 
 class $$PriceHistoryTableOrderingComposer
@@ -5109,55 +4867,22 @@ class $$PriceHistoryTableOrderingComposer
   ColumnOrderings<int> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get produitUniteId => $composableBuilder(
+      column: $table.produitUniteId,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<double> get ancienPrix => $composableBuilder(
       column: $table.ancienPrix, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<double> get nouveauPrix => $composableBuilder(
       column: $table.nouveauPrix, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get pseudo => $composableBuilder(
+      column: $table.pseudo, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification,
       builder: (column) => ColumnOrderings(column));
-
-  $$ProductUnitsTableOrderingComposer get produitUniteId {
-    final $$ProductUnitsTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.produitUniteId,
-        referencedTable: $db.productUnits,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ProductUnitsTableOrderingComposer(
-              $db: $db,
-              $table: $db.productUnits,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$UsersTableOrderingComposer get utilisateurId {
-    final $$UsersTableOrderingComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.utilisateurId,
-        referencedTable: $db.users,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$UsersTableOrderingComposer(
-              $db: $db,
-              $table: $db.users,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
 }
 
 class $$PriceHistoryTableAnnotationComposer
@@ -5172,54 +4897,20 @@ class $$PriceHistoryTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<int> get produitUniteId => $composableBuilder(
+      column: $table.produitUniteId, builder: (column) => column);
+
   GeneratedColumn<double> get ancienPrix => $composableBuilder(
       column: $table.ancienPrix, builder: (column) => column);
 
   GeneratedColumn<double> get nouveauPrix => $composableBuilder(
       column: $table.nouveauPrix, builder: (column) => column);
 
+  GeneratedColumn<String> get pseudo =>
+      $composableBuilder(column: $table.pseudo, builder: (column) => column);
+
   GeneratedColumn<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification, builder: (column) => column);
-
-  $$ProductUnitsTableAnnotationComposer get produitUniteId {
-    final $$ProductUnitsTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.produitUniteId,
-        referencedTable: $db.productUnits,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$ProductUnitsTableAnnotationComposer(
-              $db: $db,
-              $table: $db.productUnits,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
-
-  $$UsersTableAnnotationComposer get utilisateurId {
-    final $$UsersTableAnnotationComposer composer = $composerBuilder(
-        composer: this,
-        getCurrentColumn: (t) => t.utilisateurId,
-        referencedTable: $db.users,
-        getReferencedColumn: (t) => t.id,
-        builder: (joinBuilder,
-                {$addJoinBuilderToRootComposer,
-                $removeJoinBuilderFromRootComposer}) =>
-            $$UsersTableAnnotationComposer(
-              $db: $db,
-              $table: $db.users,
-              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-              joinBuilder: joinBuilder,
-              $removeJoinBuilderFromRootComposer:
-                  $removeJoinBuilderFromRootComposer,
-            ));
-    return composer;
-  }
 }
 
 class $$PriceHistoryTableTableManager extends RootTableManager<
@@ -5231,9 +4922,12 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
     $$PriceHistoryTableAnnotationComposer,
     $$PriceHistoryTableCreateCompanionBuilder,
     $$PriceHistoryTableUpdateCompanionBuilder,
-    (PriceHistoryData, $$PriceHistoryTableReferences),
+    (
+      PriceHistoryData,
+      BaseReferences<_$AppDatabase, $PriceHistoryTable, PriceHistoryData>
+    ),
     PriceHistoryData,
-    PrefetchHooks Function({bool produitUniteId, bool utilisateurId})> {
+    PrefetchHooks Function()> {
   $$PriceHistoryTableTableManager(_$AppDatabase db, $PriceHistoryTable table)
       : super(TableManagerState(
           db: db,
@@ -5249,7 +4943,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             Value<int> produitUniteId = const Value.absent(),
             Value<double> ancienPrix = const Value.absent(),
             Value<double> nouveauPrix = const Value.absent(),
-            Value<int> utilisateurId = const Value.absent(),
+            Value<String> pseudo = const Value.absent(),
             Value<DateTime> dateModification = const Value.absent(),
           }) =>
               PriceHistoryCompanion(
@@ -5257,7 +4951,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             produitUniteId: produitUniteId,
             ancienPrix: ancienPrix,
             nouveauPrix: nouveauPrix,
-            utilisateurId: utilisateurId,
+            pseudo: pseudo,
             dateModification: dateModification,
           ),
           createCompanionCallback: ({
@@ -5265,7 +4959,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             required int produitUniteId,
             required double ancienPrix,
             required double nouveauPrix,
-            required int utilisateurId,
+            Value<String> pseudo = const Value.absent(),
             Value<DateTime> dateModification = const Value.absent(),
           }) =>
               PriceHistoryCompanion.insert(
@@ -5273,63 +4967,13 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             produitUniteId: produitUniteId,
             ancienPrix: ancienPrix,
             nouveauPrix: nouveauPrix,
-            utilisateurId: utilisateurId,
+            pseudo: pseudo,
             dateModification: dateModification,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (
-                    e.readTable(table),
-                    $$PriceHistoryTableReferences(db, table, e)
-                  ))
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
               .toList(),
-          prefetchHooksCallback: (
-              {produitUniteId = false, utilisateurId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins: <
-                  T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic>>(state) {
-                if (produitUniteId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.produitUniteId,
-                    referencedTable:
-                        $$PriceHistoryTableReferences._produitUniteIdTable(db),
-                    referencedColumn: $$PriceHistoryTableReferences
-                        ._produitUniteIdTable(db)
-                        .id,
-                  ) as T;
-                }
-                if (utilisateurId) {
-                  state = state.withJoin(
-                    currentTable: table,
-                    currentColumn: table.utilisateurId,
-                    referencedTable:
-                        $$PriceHistoryTableReferences._utilisateurIdTable(db),
-                    referencedColumn: $$PriceHistoryTableReferences
-                        ._utilisateurIdTable(db)
-                        .id,
-                  ) as T;
-                }
-
-                return state;
-              },
-              getPrefetchedDataCallback: (items) async {
-                return [];
-              },
-            );
-          },
+          prefetchHooksCallback: null,
         ));
 }
 
@@ -5342,9 +4986,12 @@ typedef $$PriceHistoryTableProcessedTableManager = ProcessedTableManager<
     $$PriceHistoryTableAnnotationComposer,
     $$PriceHistoryTableCreateCompanionBuilder,
     $$PriceHistoryTableUpdateCompanionBuilder,
-    (PriceHistoryData, $$PriceHistoryTableReferences),
+    (
+      PriceHistoryData,
+      BaseReferences<_$AppDatabase, $PriceHistoryTable, PriceHistoryData>
+    ),
     PriceHistoryData,
-    PrefetchHooks Function({bool produitUniteId, bool utilisateurId})>;
+    PrefetchHooks Function()>;
 typedef $$DebtsTableCreateCompanionBuilder = DebtsCompanion Function({
   Value<int> id,
   required String numeroFacture,

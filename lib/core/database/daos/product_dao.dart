@@ -11,8 +11,46 @@ import '../../models/product_unit_model.dart';
 
 part 'product_dao.g.dart';
 
+// Modele pour l'historique avec pseudo et heure
+class PriceHistoryEntry {
+  final int id;
+  final int produitUniteId;
+  final double ancienPrix;
+  final double nouveauPrix;
+  final String pseudo;
+  final DateTime dateModification;
+
+  // Calcul du pourcentage de changement
+  double get pourcentageChangement {
+    if (ancienPrix == 0) return 0;
+    return ((nouveauPrix - ancienPrix) / ancienPrix) * 100;
+  }
+
+  bool get estHausse => nouveauPrix > ancienPrix;
+  bool get estGrandChangement => pourcentageChangement.abs() > 20;
+
+  // Emoji selon le type et l'amplitude du changement
+  String get emoji {
+    if (estGrandChangement) {
+      return estHausse ? '⏫' : '⏬';
+    } else {
+      return estHausse ? '🔼' : '🔽';
+    }
+  }
+
+  const PriceHistoryEntry({
+    required this.id,
+    required this.produitUniteId,
+    required this.ancienPrix,
+    required this.nouveauPrix,
+    required this.pseudo,
+    required this.dateModification,
+  });
+}
+
 @DriftAccessor(tables: [Products, Units, ProductUnits, PriceHistory])
-class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
+class ProductDao extends DatabaseAccessor<AppDatabase>
+    with _$ProductDaoMixin {
   ProductDao(super.db);
 
   // Tous les produits actifs
@@ -37,7 +75,9 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
 
   // Produit par id
   Future<ProductModel?> getProductById(int id) async {
-    final row = await (select(products)..where((p) => p.id.equals(id))).getSingleOrNull();
+    final row = await (select(products)
+      ..where((p) => p.id.equals(id)))
+        .getSingleOrNull();
     return row != null ? _toProductModel(row) : null;
   }
 
@@ -156,17 +196,43 @@ class ProductDao extends DatabaseAccessor<AppDatabase> with _$ProductDaoMixin {
     );
   }
 
-  // Creer historique de prix
-  Future<int> createPriceHistory(PriceHistoryCompanion companion) async {
-    return into(priceHistory).insert(companion);
+  // Creer historique de prix AVEC pseudo de l'utilisateur
+  Future<int> createPriceHistory({
+    required int produitUniteId,
+    required double ancienPrix,
+    required double nouveauPrix,
+    required String pseudo,
+  }) async {
+    return into(priceHistory).insert(
+      PriceHistoryCompanion.insert(
+        produitUniteId: produitUniteId,
+        ancienPrix: ancienPrix,
+        nouveauPrix: nouveauPrix,
+        pseudo: Value(pseudo),
+        dateModification: Value(DateTime.now()),
+      ),
+    );
   }
 
-  // Historique prix d'un produit-unite
-  Future<List<PriceHistoryData>> getPriceHistory(int produitUniteId) async {
-    return (select(priceHistory)
+  // Historique prix d'un produit-unite avec toutes les infos
+  Future<List<PriceHistoryEntry>> getPriceHistory(
+      int produitUniteId) async {
+    final rows = await (select(priceHistory)
       ..where((ph) => ph.produitUniteId.equals(produitUniteId))
-      ..orderBy([(ph) => OrderingTerm.desc(ph.dateModification)]))
+      ..orderBy(
+          [(ph) => OrderingTerm.desc(ph.dateModification)]))
         .get();
+
+    return rows
+        .map((row) => PriceHistoryEntry(
+      id: row.id,
+      produitUniteId: row.produitUniteId,
+      ancienPrix: row.ancienPrix,
+      nouveauPrix: row.nouveauPrix,
+      pseudo: row.pseudo,
+      dateModification: row.dateModification,
+    ))
+        .toList();
   }
 
   // Creer unite globale

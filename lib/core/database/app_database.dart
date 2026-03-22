@@ -42,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -60,19 +60,21 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await m.addColumn(users, users.role);
           await m.addColumn(users, users.approuve);
-          // Mettre a jour les utilisateurs existants comme approuves
           await customStatement(
               "UPDATE users SET role = 'superuser', approuve = 1 WHERE id = 1");
           await customStatement(
               "UPDATE users SET role = 'utilisateur', approuve = 1 WHERE id != 1");
+        }
+        if (from < 4) {
+          // Ajout colonne pseudo dans price_history
+          await m.addColumn(priceHistory, priceHistory.pseudo);
         }
       },
     );
   }
 
   Future<void> _seedInitialData() async {
-    // Superutilisateur - Developpeur (VOUS)
-    // Changez pseudo et mot de passe selon votre choix
+    // Superutilisateur developpeur
     await into(users).insert(
       UsersCompanion.insert(
         nomComplet: 'VoaybeDev',
@@ -83,7 +85,6 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
 
-    // Unites par defaut
     final unitesDefaut = [
       UnitsCompanion.insert(nom: 'Kilogramme', symbole: const Value('kg')),
       UnitsCompanion.insert(nom: 'Gramme', symbole: const Value('g')),
