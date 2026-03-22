@@ -1,10 +1,6 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 
 import 'tables/users_table.dart';
 import 'tables/clients_table.dart';
@@ -42,10 +38,11 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase([QueryExecutor? executor])
+      : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -55,14 +52,17 @@ class AppDatabase extends _$AppDatabase {
         await _seedInitialData();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Migrations futures ici
+        if (from < 2) {
+          // Migration v1 -> v2 : ajout CIN et photos clients
+          await m.addColumn(clients, clients.cin);
+          await m.addColumn(clients, clients.photoCin);
+          await m.addColumn(clients, clients.photo);
+        }
       },
     );
   }
 
-  // Seed donnees initiales
   Future<void> _seedInitialData() async {
-    // Utilisateur admin par defaut
     await into(users).insert(
       UsersCompanion.insert(
         nomComplet: 'Administrateur',
@@ -71,7 +71,6 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
 
-    // Unites par defaut
     final unitesDefaut = [
       UnitsCompanion.insert(nom: 'Kilogramme', symbole: const Value('kg')),
       UnitsCompanion.insert(nom: 'Gramme', symbole: const Value('g')),
@@ -90,10 +89,7 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  // Hash simple du mot de passe (SHA-256 en production)
   static String _hashPassword(String password) {
-    // En production utiliser crypto package pour SHA-256
-    // Pour l'instant simple concatenation pour le dev
     return 'hash_$password';
   }
 
@@ -102,7 +98,6 @@ class AppDatabase extends _$AppDatabase {
   }
 }
 
-// Provider global de la base de donnees
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   throw UnimplementedError('Override in main()');
 });

@@ -11,7 +11,8 @@ final clientsListProvider = FutureProvider<List<ClientModel>>((ref) async {
 
 final clientsSearchProvider = StateProvider<String>((ref) => '');
 
-final clientsFilteredProvider = FutureProvider<List<ClientModel>>((ref) async {
+final clientsFilteredProvider =
+FutureProvider<List<ClientModel>>((ref) async {
   final db = ref.watch(appDatabaseProvider);
   final search = ref.watch(clientsSearchProvider);
   if (search.trim().isEmpty) {
@@ -20,7 +21,8 @@ final clientsFilteredProvider = FutureProvider<List<ClientModel>>((ref) async {
   return db.clientDao.searchClients(search);
 });
 
-class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
+class ClientsNotifier
+    extends StateNotifier<AsyncValue<List<ClientModel>>> {
   final AppDatabase _db;
 
   ClientsNotifier(this._db) : super(const AsyncValue.loading()) {
@@ -52,6 +54,9 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
     required String nomComplet,
     required String telephone,
     required String adresse,
+    String? cin,
+    String? photoCin,
+    String? photo,
   }) async {
     try {
       await _db.clientDao.createClient(
@@ -59,6 +64,9 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
           nomComplet: Value(nomComplet),
           telephone: Value(telephone),
           adresse: Value(adresse),
+          cin: Value(cin),
+          photoCin: Value(photoCin),
+          photo: Value(photo),
         ),
       );
       await load();
@@ -73,6 +81,9 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
     required String nomComplet,
     required String telephone,
     required String adresse,
+    String? cin,
+    String? photoCin,
+    String? photo,
   }) async {
     try {
       await _db.clientDao.updateClient(
@@ -81,6 +92,9 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
           nomComplet: Value(nomComplet),
           telephone: Value(telephone),
           adresse: Value(adresse),
+          cin: Value(cin),
+          photoCin: Value(photoCin),
+          photo: Value(photo),
         ),
       );
       await load();
@@ -90,23 +104,11 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
     }
   }
 
-  Future<String?> deactivate(int id) async {
-    try {
-      final debts = await _db.debtDao.getClientActiveDebts(id);
-      if (debts.isNotEmpty) {
-        return 'Impossible de supprimer un client avec des dettes non soldees';
-      }
-      await _db.clientDao.deactivateClient(id);
-      await load();
-      return null;
-    } catch (e) {
-      return e.toString();
-    }
-  }
+// Pas de suppression - les clients sont permanents
 }
 
-final clientsNotifierProvider =
-StateNotifierProvider<ClientsNotifier, AsyncValue<List<ClientModel>>>((ref) {
+final clientsNotifierProvider = StateNotifierProvider<ClientsNotifier,
+    AsyncValue<List<ClientModel>>>((ref) {
   final db = ref.watch(appDatabaseProvider);
   return ClientsNotifier(db);
 });

@@ -1,72 +1,70 @@
-import 'package:equatable/equatable.dart';
+import 'package:drift/drift.dart';
 
-class ClientModel extends Equatable {
-  final int id;
-  final String nomComplet;
-  final String telephone;
-  final String adresse;
-  final bool actif;
-  final DateTime dateCreation;
+import '../app_database.dart';
+import '../tables/clients_table.dart';
+import '../../models/client_model.dart';
 
-  const ClientModel({
-    required this.id,
-    required this.nomComplet,
-    required this.telephone,
-    required this.adresse,
-    required this.actif,
-    required this.dateCreation,
-  });
+part 'client_dao.g.dart';
 
-  String get initiale => nomComplet.isNotEmpty ? nomComplet[0].toUpperCase() : '?';
+@DriftAccessor(tables: [Clients])
+class ClientDao extends DatabaseAccessor<AppDatabase>
+    with _$ClientDaoMixin {
+  ClientDao(super.db);
 
-  String get prenomAffichage {
-    final parts = nomComplet.trim().split(' ');
-    return parts.isNotEmpty ? parts[0] : nomComplet;
+  Future<List<ClientModel>> getActiveClients() async {
+    final rows = await (select(clients)
+      ..where((c) => c.actif.equals(true))
+      ..orderBy([(c) => OrderingTerm.asc(c.nomComplet)]))
+        .get();
+    return rows.map(_toModel).toList();
   }
 
-  ClientModel copyWith({
-    int? id,
-    String? nomComplet,
-    String? telephone,
-    String? adresse,
-    bool? actif,
-    DateTime? dateCreation,
-  }) {
+  Future<List<ClientModel>> getAllClients() async {
+    final rows = await (select(clients)
+      ..orderBy([(c) => OrderingTerm.asc(c.nomComplet)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  Future<List<ClientModel>> searchClients(String query) async {
+    final q = '%${query.toLowerCase()}%';
+    final rows = await (select(clients)
+      ..where((c) => c.actif.equals(true))
+      ..where(
+              (c) => c.nomComplet.lower().like(q) | c.telephone.like(q))
+      ..orderBy([(c) => OrderingTerm.asc(c.nomComplet)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
+  Future<ClientModel?> getClientById(int id) async {
+    final row = await (select(clients)
+      ..where((c) => c.id.equals(id)))
+        .getSingleOrNull();
+    return row != null ? _toModel(row) : null;
+  }
+
+  Future<int> createClient(ClientsCompanion companion) async {
+    return into(clients).insert(companion);
+  }
+
+  Future<bool> updateClient(ClientsCompanion companion) async {
+    return update(clients).replace(companion);
+  }
+
+  // Pas de suppression - les clients ne peuvent jamais etre supprimes
+
+  ClientModel _toModel(Client row) {
     return ClientModel(
-      id: id ?? this.id,
-      nomComplet: nomComplet ?? this.nomComplet,
-      telephone: telephone ?? this.telephone,
-      adresse: adresse ?? this.adresse,
-      actif: actif ?? this.actif,
-      dateCreation: dateCreation ?? this.dateCreation,
+      id: row.id,
+      nomComplet: row.nomComplet,
+      telephone: row.telephone,
+      adresse: row.adresse,
+      cin: row.cin,
+      photoCin: row.photoCin,
+      photo: row.photo,
+      actif: row.actif,
+      dateCreation: row.dateCreation,
     );
   }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'nom_complet': nomComplet,
-      'telephone': telephone,
-      'adresse': adresse,
-      'actif': actif ? 1 : 0,
-      'date_creation': dateCreation.toIso8601String(),
-    };
-  }
-
-  factory ClientModel.fromMap(Map<String, dynamic> map) {
-    return ClientModel(
-      id: map['id'] as int,
-      nomComplet: map['nom_complet'] as String,
-      telephone: map['telephone'] as String? ?? '',
-      adresse: map['adresse'] as String? ?? '',
-      actif: (map['actif'] as int? ?? 1) == 1,
-      dateCreation: DateTime.parse(map['date_creation'] as String),
-    );
-  }
-
-  @override
-  List<Object?> get props => [id, nomComplet, telephone, actif];
-
-  @override
-  String toString() => 'ClientModel(id: $id, nom: $nomComplet, actif: $actif)';
 }

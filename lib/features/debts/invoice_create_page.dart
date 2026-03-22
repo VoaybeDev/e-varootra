@@ -5,19 +5,18 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/formatters.dart';
-import '../../app/utils/validators.dart';
 import '../../core/models/client_model.dart';
 import '../../core/models/product_unit_model.dart';
 import '../../core/services/invoice_service.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/gradient_text.dart';
+import '../archive/archive_provider.dart';
 import '../auth/auth_provider.dart';
 import '../clients/clients_provider.dart';
-import '../products/products_provider.dart';
-import '../archive/archive_provider.dart';
 import '../dashboard/dashboard_provider.dart';
 import '../home/home_provider.dart';
+import '../products/products_provider.dart';
 import 'debts_provider.dart';
 
 class InvoiceCreatePage extends ConsumerStatefulWidget {
@@ -31,7 +30,8 @@ class InvoiceCreatePage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<InvoiceCreatePage> createState() => _InvoiceCreatePageState();
+  ConsumerState<InvoiceCreatePage> createState() =>
+      _InvoiceCreatePageState();
 }
 
 class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
@@ -40,22 +40,23 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
   final List<_InvoiceLine> _lines = [];
   double _paiementInitial = 0;
   bool _isLoading = false;
+  bool _paiementTotal = false;
 
   @override
   void initState() {
     super.initState();
     _addLine();
-    // Forcer le rechargement des produits
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(allProductUnitsProvider);
       if (widget.preselectedClientId != null) {
-        final clients = ref.read(clientsNotifierProvider).value ?? [];
+        final clients =
+            ref.read(clientsNotifierProvider).value ?? [];
         if (clients.isNotEmpty) {
-          final client = clients.firstWhere(
-                (c) => c.id == widget.preselectedClientId,
-            orElse: () => clients.first,
-          );
-          setState(() => _selectedClient = client);
+          try {
+            final client = clients.firstWhere(
+                    (c) => c.id == widget.preselectedClientId);
+            setState(() => _selectedClient = client);
+          } catch (_) {}
         }
       }
     });
@@ -67,10 +68,12 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
 
   double get _total => _lines.fold(
     0.0,
-        (s, l) => s + (l.productUnit?.prixUnitaire ?? 0) * (l.quantite),
+        (s, l) =>
+    s + (l.productUnit?.prixUnitaire ?? 0) * l.quantite,
   );
 
-  double get _restant => (_total - _paiementInitial).clamp(0.0, double.infinity);
+  double get _restant =>
+      (_total - _paiementInitial).clamp(0.0, double.infinity);
 
   Future<void> _selectDate() async {
     final picked = await showDatePicker(
@@ -95,7 +98,18 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
 
   Future<void> _save() async {
     if (_selectedClient == null) {
-      AppToast.show(context, 'Selectionnez un client', type: ToastType.error);
+      AppToast.show(context, 'Selectionnez un client',
+          type: ToastType.error);
+      return;
+    }
+
+    // Verification CIN + Photo CIN
+    if (!_selectedClient!.estVerifie) {
+      AppToast.show(
+        context,
+        'Ce client doit avoir un CIN et une Photo CIN avant de pouvoir enregistrer une dette. Modifiez le client d\'abord.',
+        type: ToastType.error,
+      );
       return;
     }
 
@@ -131,7 +145,6 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
       );
 
       if (mounted) {
-        // Invalider TOUS les providers concernes
         ref.invalidate(activeInvoicesByClientProvider);
         ref.invalidate(paidInvoicesByClientProvider);
         ref.invalidate(archiveStatsProvider);
@@ -178,7 +191,7 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
       ),
       child: Column(
         children: [
-          // Pull + Header
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
             child: Column(
@@ -238,10 +251,10 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Client
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
                           children: [
                             Text('CLIENT *',
                                 style: AppTextStyles.inputLabel),
@@ -255,15 +268,84 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                         strokeWidth: 2)),
                               ),
                               error: (e, _) => const SizedBox(),
-                              data: (clients) => _DropdownField<ClientModel>(
-                                value: _selectedClient,
-                                hint: 'Selectionner',
-                                items: clients,
-                                itemLabel: (c) => c.nomComplet,
-                                onChanged: (c) =>
-                                    setState(() => _selectedClient = c),
-                              ),
+                              data: (clients) =>
+                                  _DropdownField<ClientModel>(
+                                    value: _selectedClient,
+                                    hint: 'Selectionner',
+                                    items: clients,
+                                    itemLabel: (c) => c.nomComplet,
+                                    onChanged: (c) {
+                                      setState(() {
+                                        _selectedClient = c;
+                                      });
+                                    },
+                                  ),
                             ),
+                            // Avertissement CIN manquant
+                            if (_selectedClient != null &&
+                                !_selectedClient!.estVerifie)
+                              Container(
+                                margin: const EdgeInsets.only(top: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.badgeDangerBg,
+                                  borderRadius:
+                                  BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color:
+                                      AppColors.badgeDangerBorder),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                        Icons.warning_amber_outlined,
+                                        size: 12,
+                                        color: AppColors.danger),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        'CIN et Photo CIN manquants - Impossible d\'enregistrer',
+                                        style: AppTextStyles.caption
+                                            .copyWith(
+                                            color:
+                                            AppColors.danger),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (_selectedClient != null &&
+                                _selectedClient!.estVerifie)
+                              Container(
+                                margin: const EdgeInsets.only(top: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.badgeSuccessBg,
+                                  borderRadius:
+                                  BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: AppColors
+                                          .badgeSuccessBorder),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                        Icons.verified_outlined,
+                                        size: 12,
+                                        color: AppColors.success),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Client verifie',
+                                      style: AppTextStyles.caption
+                                          .copyWith(
+                                          color:
+                                          AppColors.success),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -273,9 +355,11 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                       // Date
                       Expanded(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
                           children: [
-                            Text('DATE *', style: AppTextStyles.inputLabel),
+                            Text('DATE *',
+                                style: AppTextStyles.inputLabel),
                             const SizedBox(height: 7),
                             GestureDetector(
                               onTap: _selectDate,
@@ -284,17 +368,22 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                                     horizontal: 14, vertical: 13),
                                 decoration: BoxDecoration(
                                   color: AppColors.inputBg,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border:
-                                  Border.all(color: AppColors.border, width: 1.5),
+                                  borderRadius:
+                                  BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: AppColors.border,
+                                      width: 1.5),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.calendar_today_outlined,
-                                        size: 14, color: AppColors.textFaint),
+                                    const Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 14,
+                                        color: AppColors.textFaint),
                                     const SizedBox(width: 8),
                                     Text(
-                                      AppFormatters.dateShort(_selectedDate),
+                                      AppFormatters.dateShort(
+                                          _selectedDate),
                                       style: AppTextStyles.input,
                                     ),
                                   ],
@@ -309,11 +398,12 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
 
                   const SizedBox(height: 18),
 
-                  // Lignes produits
+                  // Produits
                   Row(
                     children: [
                       Expanded(
-                        child: Text('PRODUITS', style: AppTextStyles.inputLabel),
+                        child: Text('PRODUITS',
+                            style: AppTextStyles.inputLabel),
                       ),
                       GestureDetector(
                         onTap: _addLine,
@@ -323,14 +413,17 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                           decoration: BoxDecoration(
                             color: AppColors.bgCardHover,
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                                color: AppColors.border),
                           ),
                           child: Row(
                             children: [
                               const Icon(Icons.add,
-                                  size: 12, color: AppColors.textMuted),
+                                  size: 12,
+                                  color: AppColors.textMuted),
                               const SizedBox(width: 4),
-                              Text('Ligne', style: AppTextStyles.labelSmall),
+                              Text('Ligne',
+                                  style: AppTextStyles.labelSmall),
                             ],
                           ),
                         ),
@@ -340,11 +433,11 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
 
                   const SizedBox(height: 10),
 
-                  // Liste lignes
                   productUnitsAsync.when(
                     loading: () => const Center(
                         child: CircularProgressIndicator(
-                            color: AppColors.accent, strokeWidth: 2)),
+                            color: AppColors.accent,
+                            strokeWidth: 2)),
                     error: (e, _) => const SizedBox(),
                     data: (productUnits) => Column(
                       children: List.generate(_lines.length, (i) {
@@ -352,9 +445,14 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                           line: _lines[i],
                           productUnits: productUnits,
                           onRemove: _lines.length > 1
-                              ? () => setState(() => _lines.removeAt(i))
+                              ? () =>
+                              setState(() => _lines.removeAt(i))
                               : null,
-                          onChanged: () => setState(() {}),
+                          onChanged: () => setState(() {
+                            if (_paiementTotal) {
+                              _paiementInitial = _total;
+                            }
+                          }),
                         );
                       }),
                     ),
@@ -369,10 +467,12 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     decoration: BoxDecoration(
                       gradient: AppGradients.invoiceTotal,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.badgeAccentBorder),
+                      border: Border.all(
+                          color: AppColors.badgeAccentBorder),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
@@ -381,7 +481,8 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                             const SizedBox(width: 8),
                             Text('Total',
                                 style: AppTextStyles.labelSmall
-                                    .copyWith(color: AppColors.textMuted)),
+                                    .copyWith(
+                                    color: AppColors.textMuted)),
                           ],
                         ),
                         GradientText(
@@ -401,37 +502,92 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                     decoration: BoxDecoration(
                       color: AppColors.badgeSuccessBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.badgeSuccessBorder),
+                      border: Border.all(
+                          color: AppColors.badgeSuccessBorder),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'PAIEMENT INITIAL (OPTIONNEL)',
-                          style: AppTextStyles.inputLabel
-                              .copyWith(color: AppColors.success),
+                        Row(
+                          children: [
+                            Text(
+                              'PAIEMENT INITIAL (OPTIONNEL)',
+                              style: AppTextStyles.inputLabel
+                                  .copyWith(
+                                  color: AppColors.success),
+                            ),
+                            const Spacer(),
+                            // Bouton "Payer tout"
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _paiementTotal = !_paiementTotal;
+                                  _paiementInitial =
+                                  _paiementTotal ? _total : 0;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _paiementTotal
+                                      ? AppColors.success
+                                      : AppColors.bgCardHover,
+                                  borderRadius:
+                                  BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _paiementTotal
+                                        ? AppColors.success
+                                        : AppColors.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  _paiementTotal
+                                      ? 'Tout paye'
+                                      : 'Payer tout',
+                                  style: AppTextStyles.caption
+                                      .copyWith(
+                                    color: _paiementTotal
+                                        ? Colors.white
+                                        : AppColors.textMuted,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         Row(
                           children: [
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text('Montant paye',
                                       style: AppTextStyles.caption),
                                   const SizedBox(height: 6),
                                   TextFormField(
-                                    initialValue: '0',
-                                    keyboardType: TextInputType.number,
+                                    key: ValueKey(_paiementTotal),
+                                    initialValue: _paiementInitial
+                                        .toStringAsFixed(0),
+                                    keyboardType:
+                                    TextInputType.number,
+                                    readOnly: _paiementTotal,
                                     style: AppTextStyles.input,
                                     onChanged: (v) => setState(() {
                                       _paiementInitial =
                                           double.tryParse(v) ?? 0;
                                     }),
-                                    decoration: const InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 10),
+                                    decoration: InputDecoration(
+                                      contentPadding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10),
+                                      fillColor: _paiementTotal
+                                          ? AppColors.badgeSuccessBg
+                                          : AppColors.inputBg,
                                     ),
                                   ),
                                 ],
@@ -440,27 +596,33 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
                                 children: [
                                   Text('Restant',
                                       style: AppTextStyles.caption),
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 13),
+                                        horizontal: 12,
+                                        vertical: 13),
                                     decoration: BoxDecoration(
                                       color: AppColors.inputBg,
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius:
+                                      BorderRadius.circular(12),
                                       border: Border.all(
-                                          color: AppColors.border, width: 1.5),
+                                          color: AppColors.border,
+                                          width: 1.5),
                                     ),
                                     child: Text(
                                       AppFormatters.currency(_restant),
-                                      style: AppTextStyles.input.copyWith(
-                                          color: _restant > 0
-                                              ? AppColors.warning
-                                              : AppColors.success,
-                                          fontWeight: FontWeight.w700),
+                                      style:
+                                      AppTextStyles.input.copyWith(
+                                        color: _restant > 0
+                                            ? AppColors.warning
+                                            : AppColors.success,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -477,7 +639,11 @@ class _InvoiceCreatePageState extends ConsumerState<InvoiceCreatePage> {
                   GradientButton.orange(
                     label: 'Enregistrer la facture',
                     icon: Icons.save_outlined,
-                    onPressed: _isLoading ? null : _save,
+                    onPressed: (_isLoading ||
+                        (_selectedClient != null &&
+                            !_selectedClient!.estVerifie))
+                        ? null
+                        : _save,
                     fullWidth: true,
                     size: GradientButtonSize.large,
                     isLoading: _isLoading,
@@ -521,7 +687,6 @@ class _InvoiceLineWidget extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Produit
           Expanded(
             flex: 3,
             child: _DropdownField<ProductUnitModel>(
@@ -535,14 +700,12 @@ class _InvoiceLineWidget extends StatelessWidget {
               },
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // Prix (affichage)
           Expanded(
             flex: 2,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 13),
               decoration: BoxDecoration(
                 color: AppColors.inputBg,
                 borderRadius: BorderRadius.circular(10),
@@ -550,16 +713,14 @@ class _InvoiceLineWidget extends StatelessWidget {
               ),
               child: Text(
                 line.productUnit != null
-                    ? AppFormatters.currency(line.productUnit!.prixUnitaire)
+                    ? AppFormatters.currency(
+                    line.productUnit!.prixUnitaire)
                     : '-',
                 style: AppTextStyles.input.copyWith(fontSize: 13),
               ),
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // Quantite
           SizedBox(
             width: 60,
             child: TextFormField(
@@ -572,15 +733,12 @@ class _InvoiceLineWidget extends StatelessWidget {
               },
               decoration: const InputDecoration(
                 hintText: 'Qte',
-                contentPadding:
-                EdgeInsets.symmetric(horizontal: 10, vertical: 13),
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 13),
               ),
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // Bouton supprimer
           GestureDetector(
             onTap: onRemove,
             child: Opacity(
@@ -644,7 +802,8 @@ class _DropdownField<T> extends StatelessWidget {
             child: Text(
               itemLabel(item),
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.input.copyWith(fontSize: 14),
+              style:
+              AppTextStyles.input.copyWith(fontSize: 14),
             ),
           ))
               .toList(),
