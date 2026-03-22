@@ -85,6 +85,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
+    // Ecran banni
+    if (authState.isBanned) {
+      return _BannedScreen(
+        user: authState.user,
+        onRequestReactivation: () async {
+          await ref.read(authProvider.notifier).requestReactivation();
+        },
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
       body: Stack(
@@ -100,12 +110,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.accent.withValues(alpha: 0.08),
-                    Colors.transparent,
-                  ],
-                ),
+                gradient: RadialGradient(colors: [
+                  AppColors.accent.withValues(alpha: 0.08),
+                  Colors.transparent,
+                ]),
               ),
             ),
           ),
@@ -133,33 +141,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       ],
                     ),
                     child: Center(
-                      child: Text(
-                        'E',
-                        style: AppTextStyles.headlineLarge
-                            .copyWith(color: Colors.white, fontSize: 26),
-                      ),
+                      child: Text('E',
+                          style: AppTextStyles.headlineLarge
+                              .copyWith(color: Colors.white, fontSize: 26)),
                     ),
                   ),
 
                   const SizedBox(height: 14),
 
-                  GradientText(
-                    'E-VAROOTRA',
-                    gradient: AppGradients.brand,
-                    style: AppTextStyles.displayLarge
-                        .copyWith(fontSize: 26),
-                  ),
+                  GradientText('E-VAROOTRA',
+                      gradient: AppGradients.brand,
+                      style: AppTextStyles.displayLarge.copyWith(fontSize: 26)),
 
                   const SizedBox(height: 4),
 
-                  Text(
-                    'Gestion des ventes & dettes',
-                    style: AppTextStyles.bodySmall,
-                  ),
+                  Text('Gestion des ventes & dettes',
+                      style: AppTextStyles.bodySmall),
 
                   const SizedBox(height: 32),
 
-                  // Message en attente d'approbation
+                  // En attente d'approbation
                   if (authState.isPending)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
@@ -175,18 +176,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                           const Icon(Icons.hourglass_empty_outlined,
                               color: AppColors.warning, size: 32),
                           const SizedBox(height: 10),
-                          Text(
-                            'Compte en attente',
-                            style: AppTextStyles.headlineSmall.copyWith(
-                                color: AppColors.warning),
-                          ),
+                          Text('Compte en attente',
+                              style: AppTextStyles.headlineSmall
+                                  .copyWith(color: AppColors.warning)),
                           const SizedBox(height: 6),
                           Text(
-                            'Votre compte a ete cree avec succes. Un administrateur doit approuver votre acces avant que vous puissiez vous connecter.',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.warning,
-                              fontSize: 13,
-                            ),
+                            'Votre compte a ete cree. Un administrateur doit l\'approuver avant que vous puissiez vous connecter.',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.warning),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -209,11 +206,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                     ),
                     child: Column(
                       children: [
-                        // Message succes inscription
+                        // Message succes
                         if (_successMessage != null)
                           Container(
-                            margin: const EdgeInsets.fromLTRB(
-                                20, 20, 20, 0),
+                            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.badgeWarningBg,
@@ -229,22 +225,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                     size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
-                                    _successMessage!,
-                                    style: AppTextStyles.bodySmall
-                                        .copyWith(
-                                        color: AppColors.warning),
-                                  ),
+                                  child: Text(_successMessage!,
+                                      style: AppTextStyles.bodySmall
+                                          .copyWith(
+                                          color: AppColors.warning)),
                                 ),
                               ],
                             ),
                           ),
 
-                        // Message erreur
-                        if (authState.error != null && !authState.isPending)
+                        // Erreur
+                        if (authState.error != null &&
+                            !authState.isPending &&
+                            !authState.isBanned)
                           Container(
-                            margin: const EdgeInsets.fromLTRB(
-                                20, 20, 20, 0),
+                            margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 11),
                             decoration: BoxDecoration(
@@ -259,12 +254,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                                     color: AppColors.danger, size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
-                                    authState.error!,
-                                    style: AppTextStyles.bodySmall
-                                        .copyWith(
-                                        color: AppColors.danger),
-                                  ),
+                                  child: Text(authState.error!,
+                                      style: AppTextStyles.bodySmall
+                                          .copyWith(color: AppColors.danger)),
                                 ),
                               ],
                             ),
@@ -272,8 +264,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                         // Onglets
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              20, 20, 20, 0),
+                          padding:
+                          const EdgeInsets.fromLTRB(20, 20, 20, 0),
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
@@ -338,7 +330,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
 
                   const SizedBox(height: 16),
 
-                  // Note inscription
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -353,7 +344,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Les nouveaux comptes necesitent l\'approbation d\'un administrateur avant d\'etre actives.',
+                            'Les nouveaux comptes necessitent l\'approbation d\'un administrateur.',
                             style: AppTextStyles.caption,
                           ),
                         ),
@@ -365,6 +356,160 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Ecran compte banni
+class _BannedScreen extends ConsumerWidget {
+  final dynamic user;
+  final VoidCallback onRequestReactivation;
+
+  const _BannedScreen({
+    required this.user,
+    required this.onRequestReactivation,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+
+    return Scaffold(
+      backgroundColor: AppColors.bgDeep,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.badgeDangerBg,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: AppColors.badgeDangerBorder, width: 2),
+                  ),
+                  child: const Icon(Icons.block,
+                      color: AppColors.danger, size: 40),
+                ),
+
+                const SizedBox(height: 24),
+
+                Text('Compte banni',
+                    style: AppTextStyles.headlineLarge
+                        .copyWith(color: AppColors.danger)),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  'Votre compte a ete banni. Vous ne pouvez plus acceder a l\'application.',
+                  style: AppTextStyles.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 8),
+
+                if (user?.dateBan != null)
+                  Text(
+                    'Banni le ${user.dateBan.day}/${user.dateBan.month}/${user.dateBan.year}',
+                    style: AppTextStyles.caption,
+                  ),
+
+                const SizedBox(height: 32),
+
+                // Si pas encore en pending (toujours banni)
+                if (!authState.isPending) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgCard,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Vous pouvez demander la reactivation de votre compte. Un administrateur examinera votre demande.',
+                          style: AppTextStyles.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 14),
+                        GestureDetector(
+                          onTap: onRequestReactivation,
+                          child: Container(
+                            width: double.infinity,
+                            padding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              gradient: AppGradients.brand,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send_outlined,
+                                    size: 16, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Demander la reactivation',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Demande envoyee
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.badgeWarningBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: AppColors.badgeWarningBorder),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.hourglass_empty_outlined,
+                            color: AppColors.warning, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Demande envoyee. En attente de validation par un administrateur.',
+                            style: AppTextStyles.bodySmall
+                                .copyWith(color: AppColors.warning),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                GestureDetector(
+                  onTap: () => ref.read(authProvider.notifier).logout(),
+                  child: Text(
+                    'Revenir a la connexion',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textFaint,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -542,10 +687,7 @@ class _AuthField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.toUpperCase(),
-          style: AppTextStyles.inputLabel,
-        ),
+        Text(label.toUpperCase(), style: AppTextStyles.inputLabel),
         const SizedBox(height: 7),
         TextFormField(
           controller: controller,
@@ -554,7 +696,8 @@ class _AuthField extends StatelessWidget {
           style: AppTextStyles.input,
           decoration: InputDecoration(
             hintText: placeholder,
-            prefixIcon: Icon(icon, size: 16, color: AppColors.textFaint),
+            prefixIcon:
+            Icon(icon, size: 16, color: AppColors.textFaint),
             suffixIcon: suffixIcon,
           ),
         ),

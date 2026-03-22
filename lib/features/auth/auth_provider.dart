@@ -8,21 +8,24 @@ class AuthState {
   final bool isLoading;
   final String? error;
   final bool isPending;
+  final bool isBanned;
 
   const AuthState({
     this.user,
     this.isLoading = false,
     this.error,
     this.isPending = false,
+    this.isBanned = false,
   });
 
-  bool get isAuthenticated => user != null && !isPending;
+  bool get isAuthenticated => user != null && !isPending && !isBanned;
 
   AuthState copyWith({
     UserModel? user,
     bool? isLoading,
     String? error,
     bool? isPending,
+    bool? isBanned,
     bool clearError = false,
     bool clearUser = false,
   }) {
@@ -31,6 +34,7 @@ class AuthState {
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : error ?? this.error,
       isPending: isPending ?? this.isPending,
+      isBanned: isBanned ?? this.isBanned,
     );
   }
 }
@@ -44,19 +48,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final result = await _authService.login(pseudo, password);
-
       if (result.isSuccess) {
         state = AuthState(user: result.user);
         return true;
       } else if (result.isPending) {
         state = AuthState(
-          isPending: true,
-          error: result.error,
-        );
+            user: result.user, isPending: true, error: result.error);
+        return false;
+      } else if (result.isBanned) {
+        state = AuthState(
+            user: result.user, isBanned: true, error: result.error);
         return false;
       } else {
-        state = state.copyWith(
-            isLoading: false, error: result.error);
+        state = state.copyWith(isLoading: false, error: result.error);
         return false;
       }
     } catch (e) {
@@ -114,16 +118,38 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> approveUser(int userId) async {
     if (state.user == null || !state.user!.estAdmin) return;
     await _authService.approveUser(userId, state.user!);
-    ref_pendingUsers?.call();
   }
 
   Future<void> rejectUser(int userId) async {
     if (state.user == null || !state.user!.estAdmin) return;
     await _authService.rejectUser(userId, state.user!);
-    ref_pendingUsers?.call();
   }
 
-  VoidCallback? ref_pendingUsers;
+  Future<void> banUser(int userId) async {
+    if (state.user == null || !state.user!.estAdmin) return;
+    await _authService.banUser(userId, state.user!);
+  }
+
+  Future<void> unbanUser(int userId) async {
+    if (state.user == null || !state.user!.estAdmin) return;
+    await _authService.unbanUser(userId, state.user!);
+  }
+
+  Future<void> permanentlyDeleteUser(int userId) async {
+    if (state.user == null || !state.user!.estAdmin) return;
+    await _authService.permanentlyDeleteUser(userId, state.user!);
+  }
+
+  // Utilisateur banni demande la reactivation
+  Future<void> requestReactivation() async {
+    if (state.user == null) return;
+    await _authService.requestReactivation(state.user!.id);
+    state = AuthState(
+      user: state.user,
+      isPending: true,
+      error: 'Demande envoyee. En attente d\'approbation.',
+    );
+  }
 
   Future<void> logout() async {
     await _authService.logout();
@@ -135,8 +161,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
-typedef VoidCallback = void Function();
-
 final authProvider =
 StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final service = ref.watch(authServiceProvider);
@@ -147,14 +171,14 @@ final currentUserProvider = Provider<UserModel?>((ref) {
   return ref.watch(authProvider).user;
 });
 
-// Provider utilisateurs en attente
 final pendingUsersProvider = FutureProvider<List<UserModel>>((ref) async {
-  final service = ref.watch(authServiceProvider);
-  return service.getPendingUsers();
+  return ref.watch(authServiceProvider).getPendingUsers();
 });
 
-// Provider tous les utilisateurs approuves
 final approvedUsersProvider = FutureProvider<List<UserModel>>((ref) async {
-  final service = ref.watch(authServiceProvider);
-  return service.getApprovedUsers();
+  return ref.watch(authServiceProvider).getApprovedActiveUsers();
+});
+
+final bannedUsersProvider = FutureProvider<List<UserModel>>((ref) async {
+  return ref.watch(authServiceProvider).getBannedUsers();
 });

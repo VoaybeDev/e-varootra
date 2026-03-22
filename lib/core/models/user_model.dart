@@ -9,6 +9,8 @@ class UserModel extends Equatable {
   final String motDePasseHash;
   final UserRole role;
   final bool approuve;
+  final bool banni;
+  final DateTime? dateBan;
   final DateTime dateCreation;
 
   const UserModel({
@@ -18,6 +20,8 @@ class UserModel extends Equatable {
     required this.motDePasseHash,
     required this.role,
     required this.approuve,
+    required this.banni,
+    this.dateBan,
     required this.dateCreation,
   });
 
@@ -30,9 +34,10 @@ class UserModel extends Equatable {
   }
 
   bool get estSuperuser => role == UserRole.superuser;
-  bool get estAdmin => role == UserRole.admin || role == UserRole.superuser;
+  bool get estAdmin =>
+      role == UserRole.admin || role == UserRole.superuser;
   bool get estUtilisateur => role == UserRole.utilisateur;
-  bool get peutSeConnecter => approuve;
+  bool get peutSeConnecter => approuve && !banni;
 
   String get roleLabel {
     switch (role) {
@@ -74,6 +79,8 @@ class UserModel extends Equatable {
     String? motDePasseHash,
     UserRole? role,
     bool? approuve,
+    bool? banni,
+    DateTime? dateBan,
     DateTime? dateCreation,
   }) {
     return UserModel(
@@ -83,14 +90,12 @@ class UserModel extends Equatable {
       motDePasseHash: motDePasseHash ?? this.motDePasseHash,
       role: role ?? this.role,
       approuve: approuve ?? this.approuve,
+      banni: banni ?? this.banni,
+      dateBan: dateBan ?? this.dateBan,
       dateCreation: dateCreation ?? this.dateCreation,
     );
   }
 
   @override
-  List<Object?> get props => [id, pseudo, role, approuve];
-
-  @override
-  String toString() =>
-      'UserModel(id: $id, pseudo: $pseudo, role: $role, approuve: $approuve)';
+  List<Object?> get props => [id, pseudo, role, approuve, banni];
 }

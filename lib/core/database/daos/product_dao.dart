@@ -11,16 +11,15 @@ import '../../models/product_unit_model.dart';
 
 part 'product_dao.g.dart';
 
-// Modele pour l'historique avec pseudo et heure
 class PriceHistoryEntry {
   final int id;
   final int produitUniteId;
   final double ancienPrix;
   final double nouveauPrix;
   final String pseudo;
+  final String role;
   final DateTime dateModification;
 
-  // Calcul du pourcentage de changement
   double get pourcentageChangement {
     if (ancienPrix == 0) return 0;
     return ((nouveauPrix - ancienPrix) / ancienPrix) * 100;
@@ -29,13 +28,9 @@ class PriceHistoryEntry {
   bool get estHausse => nouveauPrix > ancienPrix;
   bool get estGrandChangement => pourcentageChangement.abs() > 20;
 
-  // Emoji selon le type et l'amplitude du changement
   String get emoji {
-    if (estGrandChangement) {
-      return estHausse ? '⏫' : '⏬';
-    } else {
-      return estHausse ? '🔼' : '🔽';
-    }
+    if (estGrandChangement) return estHausse ? '⏫' : '⏬';
+    return estHausse ? '🔼' : '🔽';
   }
 
   const PriceHistoryEntry({
@@ -44,6 +39,7 @@ class PriceHistoryEntry {
     required this.ancienPrix,
     required this.nouveauPrix,
     required this.pseudo,
+    required this.role,
     required this.dateModification,
   });
 }
@@ -53,7 +49,6 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     with _$ProductDaoMixin {
   ProductDao(super.db);
 
-  // Tous les produits actifs
   Future<List<ProductModel>> getActiveProducts() async {
     final rows = await (select(products)
       ..where((p) => p.actif.equals(true))
@@ -62,7 +57,6 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     return rows.map(_toProductModel).toList();
   }
 
-  // Recherche produits
   Future<List<ProductModel>> searchProducts(String query) async {
     final q = '%${query.toLowerCase()}%';
     final rows = await (select(products)
@@ -73,15 +67,13 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     return rows.map(_toProductModel).toList();
   }
 
-  // Produit par id
   Future<ProductModel?> getProductById(int id) async {
-    final row = await (select(products)
-      ..where((p) => p.id.equals(id)))
+    final row =
+    await (select(products)..where((p) => p.id.equals(id)))
         .getSingleOrNull();
     return row != null ? _toProductModel(row) : null;
   }
 
-  // Toutes les unites actives
   Future<List<UnitModel>> getActiveUnits() async {
     final rows = await (select(units)
       ..where((u) => u.actif.equals(true))
@@ -90,7 +82,7 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     return rows.map(_toUnitModel).toList();
   }
 
-  // Unites d'un produit
+  // Unites d'un produit SANS join (interne)
   Future<List<ProductUnitModel>> getProductUnits(int produitId) async {
     final rows = await (select(productUnits)
       ..where((pu) => pu.produitId.equals(produitId))
@@ -99,7 +91,33 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     return rows.map(_toProductUnitModel).toList();
   }
 
-  // Toutes les combinaisons produit-unite actives avec JOIN
+  // Unites d'un produit AVEC join (pour l'affichage - nomUnite inclus)
+  Future<List<ProductUnitModel>> getProductUnitsWithDetails(
+      int produitId) async {
+    final query = select(productUnits).join([
+      innerJoin(units, units.id.equalsExp(productUnits.uniteId)),
+    ])
+      ..where(productUnits.produitId.equals(produitId))
+      ..where(productUnits.actif.equals(true));
+
+    final rows = await query.get();
+    return rows.map((row) {
+      final pu = row.readTable(productUnits);
+      final u = row.readTable(units);
+      return ProductUnitModel(
+        id: pu.id,
+        produitId: pu.produitId,
+        uniteId: pu.uniteId,
+        prixUnitaire: pu.prixUnitaire,
+        actif: pu.actif,
+        dateModification: pu.dateModification,
+        nomUnite: u.nom,
+        symbolesUnite: u.symbole,
+      );
+    }).toList();
+  }
+
+  // Toutes les combinaisons produit-unite actives avec JOIN (pour facture)
   Future<List<ProductUnitModel>> getAllProductUnitsWithDetails() async {
     final query = select(productUnits).join([
       innerJoin(products, products.id.equalsExp(productUnits.produitId)),
@@ -131,7 +149,6 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     }).toList();
   }
 
-  // ProductUnit par id
   Future<ProductUnitModel?> getProductUnitById(int id) async {
     final query = select(productUnits).join([
       innerJoin(products, products.id.equalsExp(productUnits.produitId)),
@@ -157,36 +174,30 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  // Creer produit
   Future<int> createProduct(ProductsCompanion companion) async {
     return into(products).insert(companion);
   }
 
-  // Mettre a jour produit
   Future<bool> updateProduct(ProductsCompanion companion) async {
     return update(products).replace(companion);
   }
 
-  // Desactiver produit
   Future<void> deactivateProduct(int id) async {
     await (update(products)..where((p) => p.id.equals(id))).write(
       const ProductsCompanion(actif: Value(false)),
     );
   }
 
-  // Creer unite de produit
   Future<int> createProductUnit(ProductUnitsCompanion companion) async {
     return into(productUnits).insert(companion);
   }
 
-  // Mettre a jour unite de produit
   Future<void> updateProductUnit(ProductUnitsCompanion companion) async {
     await (update(productUnits)
       ..where((pu) => pu.id.equals(companion.id.value)))
         .write(companion);
   }
 
-  // Desactiver unite de produit
   Future<void> deactivateProductUnit(int id) async {
     await (update(productUnits)..where((pu) => pu.id.equals(id))).write(
       ProductUnitsCompanion(
@@ -196,31 +207,31 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
     );
   }
 
-  // Creer historique de prix AVEC pseudo de l'utilisateur
+  // Creer historique avec pseudo ET role
   Future<int> createPriceHistory({
     required int produitUniteId,
     required double ancienPrix,
     required double nouveauPrix,
     required String pseudo,
+    required String role,
   }) async {
     return into(priceHistory).insert(
-      PriceHistoryCompanion.insert(
-        produitUniteId: produitUniteId,
-        ancienPrix: ancienPrix,
-        nouveauPrix: nouveauPrix,
+      PriceHistoryCompanion(
+        produitUniteId: Value(produitUniteId),
+        ancienPrix: Value(ancienPrix),
+        nouveauPrix: Value(nouveauPrix),
         pseudo: Value(pseudo),
+        role: Value(role),
         dateModification: Value(DateTime.now()),
       ),
     );
   }
 
-  // Historique prix d'un produit-unite avec toutes les infos
   Future<List<PriceHistoryEntry>> getPriceHistory(
       int produitUniteId) async {
     final rows = await (select(priceHistory)
       ..where((ph) => ph.produitUniteId.equals(produitUniteId))
-      ..orderBy(
-          [(ph) => OrderingTerm.desc(ph.dateModification)]))
+      ..orderBy([(ph) => OrderingTerm.desc(ph.dateModification)]))
         .get();
 
     return rows
@@ -230,44 +241,37 @@ class ProductDao extends DatabaseAccessor<AppDatabase>
       ancienPrix: row.ancienPrix,
       nouveauPrix: row.nouveauPrix,
       pseudo: row.pseudo,
+      role: row.role,
       dateModification: row.dateModification,
     ))
         .toList();
   }
 
-  // Creer unite globale
   Future<int> createUnit(UnitsCompanion companion) async {
     return into(units).insert(companion);
   }
 
-  // Convertisseurs
-  ProductModel _toProductModel(Product row) {
-    return ProductModel(
-      id: row.id,
-      nom: row.nom,
-      description: row.description,
-      actif: row.actif,
-      dateCreation: row.dateCreation,
-    );
-  }
+  ProductModel _toProductModel(Product row) => ProductModel(
+    id: row.id,
+    nom: row.nom,
+    description: row.description,
+    actif: row.actif,
+    dateCreation: row.dateCreation,
+  );
 
-  UnitModel _toUnitModel(Unit row) {
-    return UnitModel(
-      id: row.id,
-      nom: row.nom,
-      symbole: row.symbole,
-      actif: row.actif,
-    );
-  }
+  UnitModel _toUnitModel(Unit row) => UnitModel(
+    id: row.id,
+    nom: row.nom,
+    symbole: row.symbole,
+    actif: row.actif,
+  );
 
-  ProductUnitModel _toProductUnitModel(ProductUnit row) {
-    return ProductUnitModel(
-      id: row.id,
-      produitId: row.produitId,
-      uniteId: row.uniteId,
-      prixUnitaire: row.prixUnitaire,
-      actif: row.actif,
-      dateModification: row.dateModification,
-    );
-  }
+  ProductUnitModel _toProductUnitModel(ProductUnit row) => ProductUnitModel(
+    id: row.id,
+    produitId: row.produitId,
+    uniteId: row.uniteId,
+    prixUnitaire: row.prixUnitaire,
+    actif: row.actif,
+    dateModification: row.dateModification,
+  );
 }

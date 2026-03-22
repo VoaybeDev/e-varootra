@@ -58,6 +58,21 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("approuve" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _banniMeta = const VerificationMeta('banni');
+  @override
+  late final GeneratedColumn<bool> banni = GeneratedColumn<bool>(
+      'banni', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("banni" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _dateBanMeta =
+      const VerificationMeta('dateBan');
+  @override
+  late final GeneratedColumn<DateTime> dateBan = GeneratedColumn<DateTime>(
+      'date_ban', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _dateCreationMeta =
       const VerificationMeta('dateCreation');
   @override
@@ -67,8 +82,17 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, nomComplet, pseudo, motDePasseHash, role, approuve, dateCreation];
+  List<GeneratedColumn> get $columns => [
+        id,
+        nomComplet,
+        pseudo,
+        motDePasseHash,
+        role,
+        approuve,
+        banni,
+        dateBan,
+        dateCreation
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -112,6 +136,14 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       context.handle(_approuveMeta,
           approuve.isAcceptableOrUnknown(data['approuve']!, _approuveMeta));
     }
+    if (data.containsKey('banni')) {
+      context.handle(
+          _banniMeta, banni.isAcceptableOrUnknown(data['banni']!, _banniMeta));
+    }
+    if (data.containsKey('date_ban')) {
+      context.handle(_dateBanMeta,
+          dateBan.isAcceptableOrUnknown(data['date_ban']!, _dateBanMeta));
+    }
     if (data.containsKey('date_creation')) {
       context.handle(
           _dateCreationMeta,
@@ -139,6 +171,10 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
           .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
       approuve: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}approuve'])!,
+      banni: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}banni'])!,
+      dateBan: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}date_ban']),
       dateCreation: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}date_creation'])!,
     );
@@ -157,6 +193,8 @@ class User extends DataClass implements Insertable<User> {
   final String motDePasseHash;
   final String role;
   final bool approuve;
+  final bool banni;
+  final DateTime? dateBan;
   final DateTime dateCreation;
   const User(
       {required this.id,
@@ -165,6 +203,8 @@ class User extends DataClass implements Insertable<User> {
       required this.motDePasseHash,
       required this.role,
       required this.approuve,
+      required this.banni,
+      this.dateBan,
       required this.dateCreation});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -175,6 +215,10 @@ class User extends DataClass implements Insertable<User> {
     map['mot_de_passe_hash'] = Variable<String>(motDePasseHash);
     map['role'] = Variable<String>(role);
     map['approuve'] = Variable<bool>(approuve);
+    map['banni'] = Variable<bool>(banni);
+    if (!nullToAbsent || dateBan != null) {
+      map['date_ban'] = Variable<DateTime>(dateBan);
+    }
     map['date_creation'] = Variable<DateTime>(dateCreation);
     return map;
   }
@@ -187,6 +231,10 @@ class User extends DataClass implements Insertable<User> {
       motDePasseHash: Value(motDePasseHash),
       role: Value(role),
       approuve: Value(approuve),
+      banni: Value(banni),
+      dateBan: dateBan == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dateBan),
       dateCreation: Value(dateCreation),
     );
   }
@@ -201,6 +249,8 @@ class User extends DataClass implements Insertable<User> {
       motDePasseHash: serializer.fromJson<String>(json['motDePasseHash']),
       role: serializer.fromJson<String>(json['role']),
       approuve: serializer.fromJson<bool>(json['approuve']),
+      banni: serializer.fromJson<bool>(json['banni']),
+      dateBan: serializer.fromJson<DateTime?>(json['dateBan']),
       dateCreation: serializer.fromJson<DateTime>(json['dateCreation']),
     );
   }
@@ -214,6 +264,8 @@ class User extends DataClass implements Insertable<User> {
       'motDePasseHash': serializer.toJson<String>(motDePasseHash),
       'role': serializer.toJson<String>(role),
       'approuve': serializer.toJson<bool>(approuve),
+      'banni': serializer.toJson<bool>(banni),
+      'dateBan': serializer.toJson<DateTime?>(dateBan),
       'dateCreation': serializer.toJson<DateTime>(dateCreation),
     };
   }
@@ -225,6 +277,8 @@ class User extends DataClass implements Insertable<User> {
           String? motDePasseHash,
           String? role,
           bool? approuve,
+          bool? banni,
+          Value<DateTime?> dateBan = const Value.absent(),
           DateTime? dateCreation}) =>
       User(
         id: id ?? this.id,
@@ -233,6 +287,8 @@ class User extends DataClass implements Insertable<User> {
         motDePasseHash: motDePasseHash ?? this.motDePasseHash,
         role: role ?? this.role,
         approuve: approuve ?? this.approuve,
+        banni: banni ?? this.banni,
+        dateBan: dateBan.present ? dateBan.value : this.dateBan,
         dateCreation: dateCreation ?? this.dateCreation,
       );
   User copyWithCompanion(UsersCompanion data) {
@@ -246,6 +302,8 @@ class User extends DataClass implements Insertable<User> {
           : this.motDePasseHash,
       role: data.role.present ? data.role.value : this.role,
       approuve: data.approuve.present ? data.approuve.value : this.approuve,
+      banni: data.banni.present ? data.banni.value : this.banni,
+      dateBan: data.dateBan.present ? data.dateBan.value : this.dateBan,
       dateCreation: data.dateCreation.present
           ? data.dateCreation.value
           : this.dateCreation,
@@ -261,14 +319,16 @@ class User extends DataClass implements Insertable<User> {
           ..write('motDePasseHash: $motDePasseHash, ')
           ..write('role: $role, ')
           ..write('approuve: $approuve, ')
+          ..write('banni: $banni, ')
+          ..write('dateBan: $dateBan, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, nomComplet, pseudo, motDePasseHash, role, approuve, dateCreation);
+  int get hashCode => Object.hash(id, nomComplet, pseudo, motDePasseHash, role,
+      approuve, banni, dateBan, dateCreation);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -279,6 +339,8 @@ class User extends DataClass implements Insertable<User> {
           other.motDePasseHash == this.motDePasseHash &&
           other.role == this.role &&
           other.approuve == this.approuve &&
+          other.banni == this.banni &&
+          other.dateBan == this.dateBan &&
           other.dateCreation == this.dateCreation);
 }
 
@@ -289,6 +351,8 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<String> motDePasseHash;
   final Value<String> role;
   final Value<bool> approuve;
+  final Value<bool> banni;
+  final Value<DateTime?> dateBan;
   final Value<DateTime> dateCreation;
   const UsersCompanion({
     this.id = const Value.absent(),
@@ -297,6 +361,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     this.motDePasseHash = const Value.absent(),
     this.role = const Value.absent(),
     this.approuve = const Value.absent(),
+    this.banni = const Value.absent(),
+    this.dateBan = const Value.absent(),
     this.dateCreation = const Value.absent(),
   });
   UsersCompanion.insert({
@@ -306,6 +372,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     required String motDePasseHash,
     this.role = const Value.absent(),
     this.approuve = const Value.absent(),
+    this.banni = const Value.absent(),
+    this.dateBan = const Value.absent(),
     this.dateCreation = const Value.absent(),
   })  : nomComplet = Value(nomComplet),
         pseudo = Value(pseudo),
@@ -317,6 +385,8 @@ class UsersCompanion extends UpdateCompanion<User> {
     Expression<String>? motDePasseHash,
     Expression<String>? role,
     Expression<bool>? approuve,
+    Expression<bool>? banni,
+    Expression<DateTime>? dateBan,
     Expression<DateTime>? dateCreation,
   }) {
     return RawValuesInsertable({
@@ -326,6 +396,8 @@ class UsersCompanion extends UpdateCompanion<User> {
       if (motDePasseHash != null) 'mot_de_passe_hash': motDePasseHash,
       if (role != null) 'role': role,
       if (approuve != null) 'approuve': approuve,
+      if (banni != null) 'banni': banni,
+      if (dateBan != null) 'date_ban': dateBan,
       if (dateCreation != null) 'date_creation': dateCreation,
     });
   }
@@ -337,6 +409,8 @@ class UsersCompanion extends UpdateCompanion<User> {
       Value<String>? motDePasseHash,
       Value<String>? role,
       Value<bool>? approuve,
+      Value<bool>? banni,
+      Value<DateTime?>? dateBan,
       Value<DateTime>? dateCreation}) {
     return UsersCompanion(
       id: id ?? this.id,
@@ -345,6 +419,8 @@ class UsersCompanion extends UpdateCompanion<User> {
       motDePasseHash: motDePasseHash ?? this.motDePasseHash,
       role: role ?? this.role,
       approuve: approuve ?? this.approuve,
+      banni: banni ?? this.banni,
+      dateBan: dateBan ?? this.dateBan,
       dateCreation: dateCreation ?? this.dateCreation,
     );
   }
@@ -370,6 +446,12 @@ class UsersCompanion extends UpdateCompanion<User> {
     if (approuve.present) {
       map['approuve'] = Variable<bool>(approuve.value);
     }
+    if (banni.present) {
+      map['banni'] = Variable<bool>(banni.value);
+    }
+    if (dateBan.present) {
+      map['date_ban'] = Variable<DateTime>(dateBan.value);
+    }
     if (dateCreation.present) {
       map['date_creation'] = Variable<DateTime>(dateCreation.value);
     }
@@ -385,6 +467,8 @@ class UsersCompanion extends UpdateCompanion<User> {
           ..write('motDePasseHash: $motDePasseHash, ')
           ..write('role: $role, ')
           ..write('approuve: $approuve, ')
+          ..write('banni: $banni, ')
+          ..write('dateBan: $dateBan, ')
           ..write('dateCreation: $dateCreation')
           ..write(')'))
         .toString();
@@ -1806,6 +1890,13 @@ class $PriceHistoryTable extends PriceHistory
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('?'));
+  static const VerificationMeta _roleMeta = const VerificationMeta('role');
+  @override
+  late final GeneratedColumn<String> role = GeneratedColumn<String>(
+      'role', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('utilisateur'));
   static const VerificationMeta _dateModificationMeta =
       const VerificationMeta('dateModification');
   @override
@@ -1815,8 +1906,15 @@ class $PriceHistoryTable extends PriceHistory
           requiredDuringInsert: false,
           defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, produitUniteId, ancienPrix, nouveauPrix, pseudo, dateModification];
+  List<GeneratedColumn> get $columns => [
+        id,
+        produitUniteId,
+        ancienPrix,
+        nouveauPrix,
+        pseudo,
+        role,
+        dateModification
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1858,6 +1956,10 @@ class $PriceHistoryTable extends PriceHistory
       context.handle(_pseudoMeta,
           pseudo.isAcceptableOrUnknown(data['pseudo']!, _pseudoMeta));
     }
+    if (data.containsKey('role')) {
+      context.handle(
+          _roleMeta, role.isAcceptableOrUnknown(data['role']!, _roleMeta));
+    }
     if (data.containsKey('date_modification')) {
       context.handle(
           _dateModificationMeta,
@@ -1883,6 +1985,8 @@ class $PriceHistoryTable extends PriceHistory
           .read(DriftSqlType.double, data['${effectivePrefix}nouveau_prix'])!,
       pseudo: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}pseudo'])!,
+      role: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}role'])!,
       dateModification: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}date_modification'])!,
     );
@@ -1901,6 +2005,7 @@ class PriceHistoryData extends DataClass
   final double ancienPrix;
   final double nouveauPrix;
   final String pseudo;
+  final String role;
   final DateTime dateModification;
   const PriceHistoryData(
       {required this.id,
@@ -1908,6 +2013,7 @@ class PriceHistoryData extends DataClass
       required this.ancienPrix,
       required this.nouveauPrix,
       required this.pseudo,
+      required this.role,
       required this.dateModification});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1917,6 +2023,7 @@ class PriceHistoryData extends DataClass
     map['ancien_prix'] = Variable<double>(ancienPrix);
     map['nouveau_prix'] = Variable<double>(nouveauPrix);
     map['pseudo'] = Variable<String>(pseudo);
+    map['role'] = Variable<String>(role);
     map['date_modification'] = Variable<DateTime>(dateModification);
     return map;
   }
@@ -1928,6 +2035,7 @@ class PriceHistoryData extends DataClass
       ancienPrix: Value(ancienPrix),
       nouveauPrix: Value(nouveauPrix),
       pseudo: Value(pseudo),
+      role: Value(role),
       dateModification: Value(dateModification),
     );
   }
@@ -1941,6 +2049,7 @@ class PriceHistoryData extends DataClass
       ancienPrix: serializer.fromJson<double>(json['ancienPrix']),
       nouveauPrix: serializer.fromJson<double>(json['nouveauPrix']),
       pseudo: serializer.fromJson<String>(json['pseudo']),
+      role: serializer.fromJson<String>(json['role']),
       dateModification: serializer.fromJson<DateTime>(json['dateModification']),
     );
   }
@@ -1953,6 +2062,7 @@ class PriceHistoryData extends DataClass
       'ancienPrix': serializer.toJson<double>(ancienPrix),
       'nouveauPrix': serializer.toJson<double>(nouveauPrix),
       'pseudo': serializer.toJson<String>(pseudo),
+      'role': serializer.toJson<String>(role),
       'dateModification': serializer.toJson<DateTime>(dateModification),
     };
   }
@@ -1963,6 +2073,7 @@ class PriceHistoryData extends DataClass
           double? ancienPrix,
           double? nouveauPrix,
           String? pseudo,
+          String? role,
           DateTime? dateModification}) =>
       PriceHistoryData(
         id: id ?? this.id,
@@ -1970,6 +2081,7 @@ class PriceHistoryData extends DataClass
         ancienPrix: ancienPrix ?? this.ancienPrix,
         nouveauPrix: nouveauPrix ?? this.nouveauPrix,
         pseudo: pseudo ?? this.pseudo,
+        role: role ?? this.role,
         dateModification: dateModification ?? this.dateModification,
       );
   PriceHistoryData copyWithCompanion(PriceHistoryCompanion data) {
@@ -1983,6 +2095,7 @@ class PriceHistoryData extends DataClass
       nouveauPrix:
           data.nouveauPrix.present ? data.nouveauPrix.value : this.nouveauPrix,
       pseudo: data.pseudo.present ? data.pseudo.value : this.pseudo,
+      role: data.role.present ? data.role.value : this.role,
       dateModification: data.dateModification.present
           ? data.dateModification.value
           : this.dateModification,
@@ -1997,14 +2110,15 @@ class PriceHistoryData extends DataClass
           ..write('ancienPrix: $ancienPrix, ')
           ..write('nouveauPrix: $nouveauPrix, ')
           ..write('pseudo: $pseudo, ')
+          ..write('role: $role, ')
           ..write('dateModification: $dateModification')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, produitUniteId, ancienPrix, nouveauPrix, pseudo, dateModification);
+  int get hashCode => Object.hash(id, produitUniteId, ancienPrix, nouveauPrix,
+      pseudo, role, dateModification);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2014,6 +2128,7 @@ class PriceHistoryData extends DataClass
           other.ancienPrix == this.ancienPrix &&
           other.nouveauPrix == this.nouveauPrix &&
           other.pseudo == this.pseudo &&
+          other.role == this.role &&
           other.dateModification == this.dateModification);
 }
 
@@ -2023,6 +2138,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
   final Value<double> ancienPrix;
   final Value<double> nouveauPrix;
   final Value<String> pseudo;
+  final Value<String> role;
   final Value<DateTime> dateModification;
   const PriceHistoryCompanion({
     this.id = const Value.absent(),
@@ -2030,6 +2146,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     this.ancienPrix = const Value.absent(),
     this.nouveauPrix = const Value.absent(),
     this.pseudo = const Value.absent(),
+    this.role = const Value.absent(),
     this.dateModification = const Value.absent(),
   });
   PriceHistoryCompanion.insert({
@@ -2038,6 +2155,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     required double ancienPrix,
     required double nouveauPrix,
     this.pseudo = const Value.absent(),
+    this.role = const Value.absent(),
     this.dateModification = const Value.absent(),
   })  : produitUniteId = Value(produitUniteId),
         ancienPrix = Value(ancienPrix),
@@ -2048,6 +2166,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     Expression<double>? ancienPrix,
     Expression<double>? nouveauPrix,
     Expression<String>? pseudo,
+    Expression<String>? role,
     Expression<DateTime>? dateModification,
   }) {
     return RawValuesInsertable({
@@ -2056,6 +2175,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
       if (ancienPrix != null) 'ancien_prix': ancienPrix,
       if (nouveauPrix != null) 'nouveau_prix': nouveauPrix,
       if (pseudo != null) 'pseudo': pseudo,
+      if (role != null) 'role': role,
       if (dateModification != null) 'date_modification': dateModification,
     });
   }
@@ -2066,6 +2186,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
       Value<double>? ancienPrix,
       Value<double>? nouveauPrix,
       Value<String>? pseudo,
+      Value<String>? role,
       Value<DateTime>? dateModification}) {
     return PriceHistoryCompanion(
       id: id ?? this.id,
@@ -2073,6 +2194,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
       ancienPrix: ancienPrix ?? this.ancienPrix,
       nouveauPrix: nouveauPrix ?? this.nouveauPrix,
       pseudo: pseudo ?? this.pseudo,
+      role: role ?? this.role,
       dateModification: dateModification ?? this.dateModification,
     );
   }
@@ -2095,6 +2217,9 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
     if (pseudo.present) {
       map['pseudo'] = Variable<String>(pseudo.value);
     }
+    if (role.present) {
+      map['role'] = Variable<String>(role.value);
+    }
     if (dateModification.present) {
       map['date_modification'] = Variable<DateTime>(dateModification.value);
     }
@@ -2109,6 +2234,7 @@ class PriceHistoryCompanion extends UpdateCompanion<PriceHistoryData> {
           ..write('ancienPrix: $ancienPrix, ')
           ..write('nouveauPrix: $nouveauPrix, ')
           ..write('pseudo: $pseudo, ')
+          ..write('role: $role, ')
           ..write('dateModification: $dateModification')
           ..write(')'))
         .toString();
@@ -3257,6 +3383,8 @@ typedef $$UsersTableCreateCompanionBuilder = UsersCompanion Function({
   required String motDePasseHash,
   Value<String> role,
   Value<bool> approuve,
+  Value<bool> banni,
+  Value<DateTime?> dateBan,
   Value<DateTime> dateCreation,
 });
 typedef $$UsersTableUpdateCompanionBuilder = UsersCompanion Function({
@@ -3266,6 +3394,8 @@ typedef $$UsersTableUpdateCompanionBuilder = UsersCompanion Function({
   Value<String> motDePasseHash,
   Value<String> role,
   Value<bool> approuve,
+  Value<bool> banni,
+  Value<DateTime?> dateBan,
   Value<DateTime> dateCreation,
 });
 
@@ -3329,6 +3459,12 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
 
   ColumnFilters<bool> get approuve => $composableBuilder(
       column: $table.approuve, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get banni => $composableBuilder(
+      column: $table.banni, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dateBan => $composableBuilder(
+      column: $table.dateBan, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => ColumnFilters(column));
@@ -3404,6 +3540,12 @@ class $$UsersTableOrderingComposer
   ColumnOrderings<bool> get approuve => $composableBuilder(
       column: $table.approuve, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get banni => $composableBuilder(
+      column: $table.banni, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get dateBan => $composableBuilder(
+      column: $table.dateBan, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation,
       builder: (column) => ColumnOrderings(column));
@@ -3435,6 +3577,12 @@ class $$UsersTableAnnotationComposer
 
   GeneratedColumn<bool> get approuve =>
       $composableBuilder(column: $table.approuve, builder: (column) => column);
+
+  GeneratedColumn<bool> get banni =>
+      $composableBuilder(column: $table.banni, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dateBan =>
+      $composableBuilder(column: $table.dateBan, builder: (column) => column);
 
   GeneratedColumn<DateTime> get dateCreation => $composableBuilder(
       column: $table.dateCreation, builder: (column) => column);
@@ -3511,6 +3659,8 @@ class $$UsersTableTableManager extends RootTableManager<
             Value<String> motDePasseHash = const Value.absent(),
             Value<String> role = const Value.absent(),
             Value<bool> approuve = const Value.absent(),
+            Value<bool> banni = const Value.absent(),
+            Value<DateTime?> dateBan = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
               UsersCompanion(
@@ -3520,6 +3670,8 @@ class $$UsersTableTableManager extends RootTableManager<
             motDePasseHash: motDePasseHash,
             role: role,
             approuve: approuve,
+            banni: banni,
+            dateBan: dateBan,
             dateCreation: dateCreation,
           ),
           createCompanionCallback: ({
@@ -3529,6 +3681,8 @@ class $$UsersTableTableManager extends RootTableManager<
             required String motDePasseHash,
             Value<String> role = const Value.absent(),
             Value<bool> approuve = const Value.absent(),
+            Value<bool> banni = const Value.absent(),
+            Value<DateTime?> dateBan = const Value.absent(),
             Value<DateTime> dateCreation = const Value.absent(),
           }) =>
               UsersCompanion.insert(
@@ -3538,6 +3692,8 @@ class $$UsersTableTableManager extends RootTableManager<
             motDePasseHash: motDePasseHash,
             role: role,
             approuve: approuve,
+            banni: banni,
+            dateBan: dateBan,
             dateCreation: dateCreation,
           ),
           withReferenceMapper: (p0) => p0
@@ -4813,6 +4969,7 @@ typedef $$PriceHistoryTableCreateCompanionBuilder = PriceHistoryCompanion
   required double ancienPrix,
   required double nouveauPrix,
   Value<String> pseudo,
+  Value<String> role,
   Value<DateTime> dateModification,
 });
 typedef $$PriceHistoryTableUpdateCompanionBuilder = PriceHistoryCompanion
@@ -4822,6 +4979,7 @@ typedef $$PriceHistoryTableUpdateCompanionBuilder = PriceHistoryCompanion
   Value<double> ancienPrix,
   Value<double> nouveauPrix,
   Value<String> pseudo,
+  Value<String> role,
   Value<DateTime> dateModification,
 });
 
@@ -4849,6 +5007,9 @@ class $$PriceHistoryTableFilterComposer
 
   ColumnFilters<String> get pseudo => $composableBuilder(
       column: $table.pseudo, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification,
@@ -4880,6 +5041,9 @@ class $$PriceHistoryTableOrderingComposer
   ColumnOrderings<String> get pseudo => $composableBuilder(
       column: $table.pseudo, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get role => $composableBuilder(
+      column: $table.role, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification,
       builder: (column) => ColumnOrderings(column));
@@ -4908,6 +5072,9 @@ class $$PriceHistoryTableAnnotationComposer
 
   GeneratedColumn<String> get pseudo =>
       $composableBuilder(column: $table.pseudo, builder: (column) => column);
+
+  GeneratedColumn<String> get role =>
+      $composableBuilder(column: $table.role, builder: (column) => column);
 
   GeneratedColumn<DateTime> get dateModification => $composableBuilder(
       column: $table.dateModification, builder: (column) => column);
@@ -4944,6 +5111,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             Value<double> ancienPrix = const Value.absent(),
             Value<double> nouveauPrix = const Value.absent(),
             Value<String> pseudo = const Value.absent(),
+            Value<String> role = const Value.absent(),
             Value<DateTime> dateModification = const Value.absent(),
           }) =>
               PriceHistoryCompanion(
@@ -4952,6 +5120,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             ancienPrix: ancienPrix,
             nouveauPrix: nouveauPrix,
             pseudo: pseudo,
+            role: role,
             dateModification: dateModification,
           ),
           createCompanionCallback: ({
@@ -4960,6 +5129,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             required double ancienPrix,
             required double nouveauPrix,
             Value<String> pseudo = const Value.absent(),
+            Value<String> role = const Value.absent(),
             Value<DateTime> dateModification = const Value.absent(),
           }) =>
               PriceHistoryCompanion.insert(
@@ -4968,6 +5138,7 @@ class $$PriceHistoryTableTableManager extends RootTableManager<
             ancienPrix: ancienPrix,
             nouveauPrix: nouveauPrix,
             pseudo: pseudo,
+            role: role,
             dateModification: dateModification,
           ),
           withReferenceMapper: (p0) => p0

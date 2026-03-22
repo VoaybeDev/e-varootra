@@ -20,29 +20,17 @@ part 'app_database.g.dart';
 
 @DriftDatabase(
   tables: [
-    Users,
-    Clients,
-    Products,
-    Units,
-    ProductUnits,
-    PriceHistory,
-    Debts,
-    Payments,
+    Users, Clients, Products, Units,
+    ProductUnits, PriceHistory, Debts, Payments,
   ],
-  daos: [
-    UserDao,
-    ClientDao,
-    ProductDao,
-    DebtDao,
-    PaymentDao,
-  ],
+  daos: [UserDao, ClientDao, ProductDao, DebtDao, PaymentDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
       : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -61,29 +49,31 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(users, users.role);
           await m.addColumn(users, users.approuve);
           await customStatement(
-              "UPDATE users SET role = 'superuser', approuve = 1 WHERE id = 1");
+              "UPDATE users SET role='superuser', approuve=1 WHERE id=1");
           await customStatement(
-              "UPDATE users SET role = 'utilisateur', approuve = 1 WHERE id != 1");
+              "UPDATE users SET role='utilisateur', approuve=1 WHERE id!=1");
         }
         if (from < 4) {
-          // Ajout colonne pseudo dans price_history
           await m.addColumn(priceHistory, priceHistory.pseudo);
+        }
+        if (from < 5) {
+          await m.addColumn(users, users.banni);
+          await m.addColumn(users, users.dateBan);
+          await m.addColumn(priceHistory, priceHistory.role);
         }
       },
     );
   }
 
   Future<void> _seedInitialData() async {
-    // Superutilisateur developpeur
-    await into(users).insert(
-      UsersCompanion.insert(
-        nomComplet: 'VoaybeDev',
-        pseudo: 'voaybe',
-        motDePasseHash: _hashPassword('voaybe2026'),
-        role: const Value('superuser'),
-        approuve: const Value(true),
-      ),
-    );
+    await into(users).insert(UsersCompanion.insert(
+      nomComplet: 'VoaybeDev',
+      pseudo: 'voaybe',
+      motDePasseHash: _hashPassword('voaybe2026'),
+      role: const Value('superuser'),
+      approuve: const Value(true),
+      banni: const Value(false),
+    ));
 
     final unitesDefaut = [
       UnitsCompanion.insert(nom: 'Kilogramme', symbole: const Value('kg')),
@@ -97,19 +87,15 @@ class AppDatabase extends _$AppDatabase {
       UnitsCompanion.insert(nom: 'Bouteille', symbole: const Value('btl')),
       UnitsCompanion.insert(nom: 'Paquet', symbole: const Value('pqt')),
     ];
-
-    for (final unite in unitesDefaut) {
-      await into(units).insert(unite);
+    for (final u in unitesDefaut) {
+      await into(units).insert(u);
     }
   }
 
-  static String _hashPassword(String password) {
-    return 'hash_$password';
-  }
+  static String _hashPassword(String password) => 'hash_$password';
 
-  static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'e_varootra_db');
-  }
+  static QueryExecutor _openConnection() =>
+      driftDatabase(name: 'e_varootra_db');
 }
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {

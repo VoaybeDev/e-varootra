@@ -7,7 +7,6 @@ import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/formatters.dart';
 import '../../app/utils/validators.dart';
 import '../../core/database/daos/product_dao.dart';
-import '../../core/models/product_unit_model.dart';
 import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/gradient_button.dart';
@@ -34,17 +33,14 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(
                 children: [
                   Expanded(
-                    child: GradientText(
-                      'Produits',
-                      gradient: AppGradients.brand,
-                      style: AppTextStyles.headlineLarge,
-                    ),
+                    child: GradientText('Produits',
+                        gradient: AppGradients.brand,
+                        style: AppTextStyles.headlineLarge),
                   ),
                   GradientButton(
                     label: 'Ajouter',
@@ -55,8 +51,6 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
                 ],
               ),
             ),
-
-            // Recherche
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: SearchField(
@@ -64,21 +58,16 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
                 onChanged: (v) => setState(() => _search = v),
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Liste
             Expanded(
               child: productsAsync.when(
                 loading: () => const Center(
-                  child: CircularProgressIndicator(
-                      color: AppColors.accent),
-                ),
+                    child: CircularProgressIndicator(
+                        color: AppColors.accent)),
                 error: (e, _) => EmptyState(
-                  icon: Icons.error_outline,
-                  message: 'Erreur : $e',
-                  iconColor: AppColors.danger,
-                ),
+                    icon: Icons.error_outline,
+                    message: 'Erreur : $e',
+                    iconColor: AppColors.danger),
                 data: (products) {
                   final filtered = _search.trim().isEmpty
                       ? products
@@ -115,8 +104,7 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
                       itemBuilder: (_, i) => _ProductCard(
                         productWithUnits: filtered[i],
                         onEdit: () =>
-                            _openForm(context, ref,
-                                product: filtered[i]),
+                            _openForm(context, ref, product: filtered[i]),
                         onDelete: () =>
                             _confirmDelete(context, ref, filtered[i]),
                       ),
@@ -143,10 +131,8 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
           ref.read(productsNotifierProvider.notifier).load();
           ref.invalidate(allProductUnitsProvider);
           Navigator.pop(context);
-          AppToast.show(
-            context,
-            product != null ? 'Produit modifie' : 'Produit ajoute',
-          );
+          AppToast.show(context,
+              product != null ? 'Produit modifie' : 'Produit ajoute');
         },
       ),
     );
@@ -164,10 +150,8 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
         ),
         title: Text('Supprimer ${p.product.nom} ?',
             style: AppTextStyles.headlineSmall),
-        content: Text(
-          'Cette action est irreversible.',
-          style: AppTextStyles.bodySmall,
-        ),
+        content:
+        Text('Cette action est irreversible.', style: AppTextStyles.bodySmall),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -201,6 +185,20 @@ class _ProductsPageState extends ConsumerState<ProductsPage> {
 }
 
 // ═══════════════════════════════
+// COULEUR PSEUDO SELON ROLE
+// ═══════════════════════════════
+Color _pseudoColorByRole(String role) {
+  switch (role) {
+    case 'superuser':
+      return AppColors.accent; // bleu
+    case 'admin':
+      return AppColors.warning; // jaune
+    default:
+      return AppColors.success; // vert
+  }
+}
+
+// ═══════════════════════════════
 // CARTE PRODUIT
 // ═══════════════════════════════
 class _ProductCard extends ConsumerStatefulWidget {
@@ -224,8 +222,8 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
   @override
   Widget build(BuildContext context) {
     final p = widget.productWithUnits;
-    final totalHistory = p.units.fold<int>(
-        0, (sum, u) => sum + u.history.length);
+    final totalHistory =
+    p.units.fold<int>(0, (sum, u) => sum + u.history.length);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -237,7 +235,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header produit
+          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
             child: Row(
@@ -247,21 +245,17 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      GradientText(
-                        p.product.nom,
-                        gradient: AppGradients.brand,
-                        style: AppTextStyles.headlineSmall,
-                      ),
+                      GradientText(p.product.nom,
+                          gradient: AppGradients.brand,
+                          style: AppTextStyles.headlineSmall),
                       if (p.product.description != null &&
                           p.product.description!.isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          p.product.description!,
-                          style: AppTextStyles.bodySmall
-                              .copyWith(fontSize: 12),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text(p.product.description!,
+                            style: AppTextStyles.bodySmall
+                                .copyWith(fontSize: 12),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
                       ],
                     ],
                   ),
@@ -301,7 +295,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
             ),
           ),
 
-          // Chips unites
+          // Chips unites avec nomUnite correct
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
             child: Wrap(
@@ -320,7 +314,8 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        u.unit.nomUnite ?? '?',
+                        // nomUnite est maintenant correctement rempli
+                        u.unit.nomUnite ?? u.unit.symbolesUnite ?? '?',
                         style: AppTextStyles.labelSmall
                             .copyWith(fontSize: 11),
                       ),
@@ -371,21 +366,21 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
               ),
             ),
 
-          // Historique des prix
+          // Historique
           if (_showHistory)
             Container(
               decoration: const BoxDecoration(
-                border: Border(
-                    top: BorderSide(color: AppColors.border)),
-              ),
+                  border: Border(
+                      top: BorderSide(color: AppColors.border))),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: p.units.expand<Widget>((u) {
                   if (u.history.isEmpty) return <Widget>[];
                   return u.history.map<Widget>((h) =>
                       _PriceHistoryRow(
                         entry: h,
-                        unitName: u.unit.nomUnite ?? '?',
+                        unitName: u.unit.nomUnite ??
+                            u.unit.symbolesUnite ??
+                            '?',
                       ));
                 }).toList(),
               ),
@@ -413,108 +408,100 @@ class _PriceHistoryRow extends StatelessWidget {
     final pct = entry.pourcentageChangement;
     final pctStr =
         '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(1)}%';
-
-    // Couleur selon hausse/baisse
-    final color =
+    final priceColor =
     entry.estHausse ? AppColors.danger : AppColors.success;
+    // Couleur du pseudo selon le role
+    final pseudoColor = _pseudoColorByRole(entry.role);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 14, vertical: 10),
+      padding:
+      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
               color: AppColors.border.withValues(alpha: 0.5)),
-          left: BorderSide(
-            color: entry.estHausse
-                ? AppColors.danger
-                : AppColors.success,
-            width: 3,
-          ),
+          left: BorderSide(color: priceColor, width: 3),
         ),
       ),
       child: Row(
         children: [
-          // Emoji + unite
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    entry.emoji,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    unitName,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              // Prix ancien -> nouveau
-              Row(
-                children: [
-                  Text(
-                    AppFormatters.currency(entry.ancienPrix),
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.textFaint,
-                      decoration: TextDecoration.lineThrough,
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(Icons.arrow_forward,
-                        size: 10, color: AppColors.textFaint),
-                  ),
-                  Text(
-                    AppFormatters.currency(entry.nouveauPrix),
-                    style: AppTextStyles.caption.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      pctStr,
-                      style: AppTextStyles.caption.copyWith(
-                        color: color,
+          // Gauche: emoji + unite + prix
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(entry.emoji,
+                        style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    Text(
+                      unitName,
+                      style: AppTextStyles.labelSmall.copyWith(
                         fontWeight: FontWeight.w700,
-                        fontSize: 9,
+                        fontSize: 12,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Text(
+                      AppFormatters.currency(entry.ancienPrix),
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textFaint,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 5),
+                      child: Icon(Icons.arrow_forward,
+                          size: 10, color: AppColors.textFaint),
+                    ),
+                    Text(
+                      AppFormatters.currency(entry.nouveauPrix),
+                      style: AppTextStyles.caption.copyWith(
+                        color: priceColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: priceColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        pctStr,
+                        style: AppTextStyles.caption.copyWith(
+                          color: priceColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
 
-          const Spacer(),
-
-          // Pseudo + date + heure
+          // Droite: pseudo (colore selon role) + date + heure
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.person_outline,
-                      size: 10, color: AppColors.accent),
+                  Icon(Icons.person_outline,
+                      size: 10, color: pseudoColor),
                   const SizedBox(width: 3),
                   Text(
                     '@${entry.pseudo}',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.accent,
+                      color: pseudoColor, // Couleur selon role
                       fontWeight: FontWeight.w700,
                       fontSize: 10,
                     ),
@@ -529,9 +516,7 @@ class _PriceHistoryRow extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     '${AppFormatters.dateShort(entry.dateModification)} ${entry.dateModification.hour.toString().padLeft(2, '0')}:${entry.dateModification.minute.toString().padLeft(2, '0')}',
-                    style: AppTextStyles.caption.copyWith(
-                      fontSize: 10,
-                    ),
+                    style: AppTextStyles.caption.copyWith(fontSize: 10),
                   ),
                 ],
               ),
@@ -566,8 +551,8 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
   @override
   void initState() {
     super.initState();
-    _nomCtrl = TextEditingController(
-        text: widget.product?.product.nom ?? '');
+    _nomCtrl =
+        TextEditingController(text: widget.product?.product.nom ?? '');
     _descCtrl = TextEditingController(
         text: widget.product?.product.description ?? '');
 
@@ -575,8 +560,8 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
       for (final u in widget.product!.units) {
         _units.add(_UnitEntry(
           id: u.unit.id,
-          nameCtrl:
-          TextEditingController(text: u.unit.nomUnite ?? ''),
+          nameCtrl: TextEditingController(
+              text: u.unit.nomUnite ?? u.unit.symbolesUnite ?? ''),
           priceCtrl: TextEditingController(
               text: u.unit.prixUnitaire.toStringAsFixed(0)),
         ));
@@ -742,7 +727,6 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Nom
                       Text('NOM *', style: AppTextStyles.inputLabel),
                       const SizedBox(height: 7),
                       TextFormField(
@@ -751,16 +735,13 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
                         style: AppTextStyles.input,
                         decoration: const InputDecoration(
                           hintText: 'Ex: Riz, Farine, Sucre...',
-                          prefixIcon: Icon(
-                              Icons.inventory_2_outlined,
-                              size: 16,
-                              color: AppColors.textFaint),
+                          prefixIcon: Icon(Icons.inventory_2_outlined,
+                              size: 16, color: AppColors.textFaint),
                         ),
                       ),
 
                       const SizedBox(height: 14),
 
-                      // Description
                       Text('DESCRIPTION',
                           style: AppTextStyles.inputLabel),
                       const SizedBox(height: 7),
@@ -775,7 +756,6 @@ class _ProductFormState extends ConsumerState<_ProductForm> {
 
                       const SizedBox(height: 18),
 
-                      // Unites & Prix
                       Row(
                         children: [
                           Expanded(
@@ -922,9 +902,5 @@ class _UnitEntry {
   final TextEditingController nameCtrl;
   final TextEditingController priceCtrl;
 
-  _UnitEntry({
-    this.id,
-    required this.nameCtrl,
-    required this.priceCtrl,
-  });
+  _UnitEntry({this.id, required this.nameCtrl, required this.priceCtrl});
 }

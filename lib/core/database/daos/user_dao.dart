@@ -15,47 +15,57 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
     return rows.map(_toModel).toList();
   }
 
+  // En attente d'approbation (pas banni, pas approuve)
   Future<List<UserModel>> getPendingUsers() async {
     final rows = await (select(users)
       ..where((u) => u.approuve.equals(false))
+      ..where((u) => u.banni.equals(false))
       ..where((u) => u.role.equals('utilisateur')))
         .get();
     return rows.map(_toModel).toList();
   }
 
-  Future<List<UserModel>> getApprovedUsers() async {
+  // Utilisateurs actifs (approuves et non bannis)
+  Future<List<UserModel>> getApprovedActiveUsers() async {
     final rows = await (select(users)
       ..where((u) => u.approuve.equals(true))
+      ..where((u) => u.banni.equals(false))
       ..orderBy([(u) => OrderingTerm.asc(u.nomComplet)]))
         .get();
     return rows.map(_toModel).toList();
   }
 
+  // Utilisateurs bannis
+  Future<List<UserModel>> getBannedUsers() async {
+    final rows = await (select(users)
+      ..where((u) => u.banni.equals(true))
+      ..orderBy([(u) => OrderingTerm.desc(u.dateBan)]))
+        .get();
+    return rows.map(_toModel).toList();
+  }
+
   Future<UserModel?> getUserById(int id) async {
-    final row = await (select(users)
-      ..where((u) => u.id.equals(id)))
+    final row = await (select(users)..where((u) => u.id.equals(id)))
         .getSingleOrNull();
     return row != null ? _toModel(row) : null;
   }
 
   Future<UserModel?> getUserByPseudo(String pseudo) async {
-    final row = await (select(users)
-      ..where((u) => u.pseudo.equals(pseudo)))
+    final row =
+    await (select(users)..where((u) => u.pseudo.equals(pseudo)))
         .getSingleOrNull();
     return row != null ? _toModel(row) : null;
   }
 
   Future<bool> pseudoExists(String pseudo, {int? excludeId}) async {
-    var query = select(users)..where((u) => u.pseudo.equals(pseudo));
+    var q = select(users)..where((u) => u.pseudo.equals(pseudo));
     if (excludeId != null) {
-      query = query..where((u) => u.id.equals(excludeId).not());
+      q = q..where((u) => u.id.equals(excludeId).not());
     }
-    final result = await query.getSingleOrNull();
-    return result != null;
+    return await q.getSingleOrNull() != null;
   }
 
-  Future<UserModel?> authenticate(
-      String pseudo, String passwordHash) async {
+  Future<UserModel?> authenticate(String pseudo, String passwordHash) async {
     final row = await (select(users)
       ..where((u) => u.pseudo.equals(pseudo))
       ..where((u) => u.motDePasseHash.equals(passwordHash)))
@@ -69,7 +79,7 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
 
   Future<void> approveUser(int id) async {
     await (update(users)..where((u) => u.id.equals(id))).write(
-      const UsersCompanion(approuve: Value(true)),
+      const UsersCompanion(approuve: Value(true), banni: Value(false)),
     );
   }
 
@@ -77,15 +87,47 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
     await (delete(users)..where((u) => u.id.equals(id))).go();
   }
 
-  Future<void> updateUserRole(int id, String role) async {
+  // Bannir un utilisateur
+  Future<void> banUser(int id) async {
     await (update(users)..where((u) => u.id.equals(id))).write(
-      UsersCompanion(role: Value(role)),
+      UsersCompanion(
+        banni: const Value(true),
+        approuve: const Value(false),
+        dateBan: Value(DateTime.now()),
+      ),
     );
   }
 
-  Future<void> updatePassword(int id, String newHash) async {
+  // Debannir - restaure l'acces actif
+  Future<void> unbanUser(int id) async {
     await (update(users)..where((u) => u.id.equals(id))).write(
-      UsersCompanion(motDePasseHash: Value(newHash)),
+      const UsersCompanion(
+        banni: Value(false),
+        approuve: Value(true),
+        dateBan: Value(null),
+      ),
+    );
+  }
+
+  // Supprimer definitivement
+  Future<void> permanentlyDeleteUser(int id) async {
+    await (delete(users)..where((u) => u.id.equals(id))).go();
+  }
+
+  // Demander reactivation (banni -> en attente)
+  Future<void> requestReactivation(int id) async {
+    await (update(users)..where((u) => u.id.equals(id))).write(
+      const UsersCompanion(
+        banni: Value(false),
+        approuve: Value(false),
+        dateBan: Value(null),
+      ),
+    );
+  }
+
+  Future<void> updateUserRole(int id, String role) async {
+    await (update(users)..where((u) => u.id.equals(id))).write(
+      UsersCompanion(role: Value(role)),
     );
   }
 
@@ -97,6 +139,8 @@ class UserDao extends DatabaseAccessor<AppDatabase> with _$UserDaoMixin {
       motDePasseHash: row.motDePasseHash,
       role: UserModel.roleFromString(row.role),
       approuve: row.approuve,
+      banni: row.banni,
+      dateBan: row.dateBan,
       dateCreation: row.dateCreation,
     );
   }

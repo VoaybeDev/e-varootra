@@ -23,8 +23,10 @@ class UsersManagementPage extends ConsumerWidget {
       );
     }
 
+    final tabCount = currentUser.estSuperuser ? 4 : 3;
+
     return DefaultTabController(
-      length: currentUser.estSuperuser ? 3 : 2,
+      length: tabCount,
       child: Scaffold(
         backgroundColor: AppColors.bgDeep,
         body: SafeArea(
@@ -51,17 +53,36 @@ class UsersManagementPage extends ConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: GradientText(
-                        'Gestion utilisateurs',
-                        gradient: AppGradients.brand,
-                        style: AppTextStyles.headlineLarge,
-                      ),
+                      child: GradientText('Gestion utilisateurs',
+                          gradient: AppGradients.brand,
+                          style: AppTextStyles.headlineLarge),
                     ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 12),
+
+              // Legende couleurs roles
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    _RoleLegend(
+                        color: AppColors.accent,
+                        label: 'Superutilisateur'),
+                    const SizedBox(width: 8),
+                    _RoleLegend(
+                        color: AppColors.warning, label: 'Admin'),
+                    const SizedBox(width: 8),
+                    _RoleLegend(
+                        color: AppColors.success,
+                        label: 'Utilisateur'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 10),
 
               // Onglets
               Padding(
@@ -84,8 +105,9 @@ class UsersManagementPage extends ConsumerWidget {
                     labelColor: Colors.white,
                     unselectedLabelColor: AppColors.textMuted,
                     tabs: [
-                      const Tab(text: 'En attente'),
+                      const Tab(text: 'Attente'),
                       const Tab(text: 'Actifs'),
+                      const Tab(text: 'Bannis'),
                       if (currentUser.estSuperuser)
                         const Tab(text: 'Admin'),
                     ],
@@ -98,15 +120,10 @@ class UsersManagementPage extends ConsumerWidget {
               Expanded(
                 child: TabBarView(
                   children: [
-                    // En attente
-                    _PendingUsersTab(),
-
-                    // Utilisateurs actifs
-                    _ActiveUsersTab(),
-
-                    // Creer admin (superuser seulement)
-                    if (currentUser.estSuperuser)
-                      _CreateAdminTab(),
+                    _PendingTab(),
+                    _ActiveTab(),
+                    _BannedTab(),
+                    if (currentUser.estSuperuser) _CreateAdminTab(),
                   ],
                 ),
               ),
@@ -118,7 +135,33 @@ class UsersManagementPage extends ConsumerWidget {
   }
 }
 
-class _PendingUsersTab extends ConsumerWidget {
+class _RoleLegend extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _RoleLegend({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+            width: 8,
+            height: 8,
+            decoration:
+            BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label,
+            style: AppTextStyles.caption.copyWith(fontSize: 9)),
+      ],
+    );
+  }
+}
+
+// ═══════════════════════════════
+// TAB EN ATTENTE
+// ═══════════════════════════════
+class _PendingTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingAsync = ref.watch(pendingUsersProvider);
@@ -146,24 +189,44 @@ class _PendingUsersTab extends ConsumerWidget {
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: users.length,
-          itemBuilder: (_, i) => _PendingUserCard(
+          itemBuilder: (_, i) => _UserCard(
             user: users[i],
-            onApprove: () async {
-              await ref.read(authProvider.notifier).approveUser(users[i].id);
-              ref.invalidate(pendingUsersProvider);
-              ref.invalidate(approvedUsersProvider);
-              if (context.mounted) {
-                AppToast.show(context, '${users[i].nomComplet} approuve');
-              }
-            },
-            onReject: () async {
-              await ref.read(authProvider.notifier).rejectUser(users[i].id);
-              ref.invalidate(pendingUsersProvider);
-              if (context.mounted) {
-                AppToast.show(context, '${users[i].nomComplet} rejete',
-                    type: ToastType.error);
-              }
-            },
+            actions: [
+              _CardAction(
+                label: 'Rejeter',
+                icon: Icons.close,
+                color: AppColors.danger,
+                bgColor: AppColors.badgeDangerBg,
+                onTap: () async {
+                  await ref
+                      .read(authProvider.notifier)
+                      .rejectUser(users[i].id);
+                  ref.invalidate(pendingUsersProvider);
+                  if (context.mounted) {
+                    AppToast.show(context, 'Utilisateur rejete',
+                        type: ToastType.error);
+                  }
+                },
+              ),
+              _CardAction(
+                label: 'Approuver',
+                icon: Icons.check,
+                color: Colors.white,
+                bgColor: null,
+                gradient: AppGradients.green,
+                onTap: () async {
+                  await ref
+                      .read(authProvider.notifier)
+                      .approveUser(users[i].id);
+                  ref.invalidate(pendingUsersProvider);
+                  ref.invalidate(approvedUsersProvider);
+                  if (context.mounted) {
+                    AppToast.show(
+                        context, '${users[i].nomComplet} approuve');
+                  }
+                },
+              ),
+            ],
           ),
         );
       },
@@ -171,145 +234,10 @@ class _PendingUsersTab extends ConsumerWidget {
   }
 }
 
-class _PendingUserCard extends StatelessWidget {
-  final UserModel user;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
-
-  const _PendingUserCard({
-    required this.user,
-    required this.onApprove,
-    required this.onReject,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.badgeWarningBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  gradient: AppGradients.orange,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    user.initiale,
-                    style: AppTextStyles.titleMedium
-                        .copyWith(color: Colors.white),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user.nomComplet,
-                        style: AppTextStyles.labelLarge),
-                    Text('@${user.pseudo}',
-                        style: AppTextStyles.bodySmall),
-                    Text(
-                      'Inscrit le ${user.dateCreation.day}/${user.dateCreation.month}/${user.dateCreation.year}',
-                      style: AppTextStyles.caption,
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.badgeWarningBg,
-                  borderRadius: BorderRadius.circular(100),
-                  border:
-                  Border.all(color: AppColors.badgeWarningBorder),
-                ),
-                child: Text(
-                  'En attente',
-                  style: AppTextStyles.badge
-                      .copyWith(color: AppColors.warning),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: onReject,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.badgeDangerBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.badgeDangerBorder),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.close,
-                            size: 14, color: AppColors.danger),
-                        SizedBox(width: 6),
-                        Text('Rejeter',
-                            style: TextStyle(
-                                color: AppColors.danger,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: GestureDetector(
-                  onTap: onApprove,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: AppGradients.green,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check,
-                            size: 14, color: Colors.white),
-                        SizedBox(width: 6),
-                        Text('Approuver',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveUsersTab extends ConsumerWidget {
+// ═══════════════════════════════
+// TAB ACTIFS
+// ═══════════════════════════════
+class _ActiveTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final usersAsync = ref.watch(approvedUsersProvider);
@@ -324,99 +252,70 @@ class _ActiveUsersTab extends ConsumerWidget {
         itemCount: users.length,
         itemBuilder: (_, i) {
           final u = users[i];
-          Color roleColor;
-          LinearGradient roleGrad;
+          final isMe = u.id == currentUser?.id;
 
-          switch (u.role) {
-            case UserRole.superuser:
-              roleColor = AppColors.accent;
-              roleGrad = AppGradients.brand;
-              break;
-            case UserRole.admin:
-              roleColor = AppColors.warning;
-              roleGrad = AppGradients.orange;
-              break;
-            default:
-              roleColor = AppColors.success;
-              roleGrad = AppGradients.green;
-          }
+          // Determiner si on peut bannir/supprimer cet utilisateur
+          final canAct = !isMe &&
+              (currentUser!.estSuperuser ||
+                  (currentUser.estAdmin && u.estUtilisateur));
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.bgCard,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: roleGrad,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      u.initiale,
-                      style: AppTextStyles.titleMedium
-                          .copyWith(color: Colors.white),
-                    ),
-                  ),
+          return _UserCard(
+            user: u,
+            showSelf: isMe,
+            actions: canAct
+                ? [
+              // Superuser peut supprimer admin
+              if (currentUser.estSuperuser || u.estUtilisateur)
+                _CardAction(
+                  label: 'Bannir',
+                  icon: Icons.block,
+                  color: AppColors.warning,
+                  bgColor: AppColors.badgeWarningBg,
+                  onTap: () async {
+                    final confirm = await _showConfirm(
+                      context,
+                      'Bannir ${u.nomComplet} ?',
+                      'Cet utilisateur ne pourra plus se connecter. Il peut demander la reactivation.',
+                    );
+                    if (confirm == true) {
+                      await ref
+                          .read(authProvider.notifier)
+                          .banUser(u.id);
+                      ref.invalidate(approvedUsersProvider);
+                      ref.invalidate(bannedUsersProvider);
+                      if (context.mounted) {
+                        AppToast.show(context,
+                            '${u.nomComplet} est maintenant banni');
+                      }
+                    }
+                  },
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(u.nomComplet,
-                              style: AppTextStyles.labelLarge),
-                          if (u.id == currentUser?.id) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: AppColors.badgeAccentBg,
-                                borderRadius:
-                                BorderRadius.circular(100),
-                              ),
-                              child: Text(
-                                'Moi',
-                                style: AppTextStyles.badge.copyWith(
-                                    color: AppColors.accent,
-                                    fontSize: 8),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      Text('@${u.pseudo}',
-                          style: AppTextStyles.bodySmall),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: roleColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(
-                        color: roleColor.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    u.roleLabel,
-                    style: AppTextStyles.badge
-                        .copyWith(color: roleColor),
-                  ),
-                ),
-              ],
-            ),
+              _CardAction(
+                label: 'Supprimer',
+                icon: Icons.delete_outline,
+                color: AppColors.danger,
+                bgColor: AppColors.badgeDangerBg,
+                onTap: () async {
+                  final confirm = await _showConfirm(
+                    context,
+                    'Supprimer ${u.nomComplet} ?',
+                    'Cette action est irreversible. Le compte sera definitvement supprime.',
+                  );
+                  if (confirm == true) {
+                    await ref
+                        .read(authProvider.notifier)
+                        .permanentlyDeleteUser(u.id);
+                    ref.invalidate(approvedUsersProvider);
+                    if (context.mounted) {
+                      AppToast.show(
+                          context, '${u.nomComplet} supprime',
+                          type: ToastType.error);
+                    }
+                  }
+                },
+              ),
+            ]
+                : [],
           );
         },
       ),
@@ -424,10 +323,97 @@ class _ActiveUsersTab extends ConsumerWidget {
   }
 }
 
+// ═══════════════════════════════
+// TAB BANNIS
+// ═══════════════════════════════
+class _BannedTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bannedAsync = ref.watch(bannedUsersProvider);
+
+    return bannedAsync.when(
+      loading: () => const Center(
+          child: CircularProgressIndicator(color: AppColors.accent)),
+      error: (e, _) => Center(child: Text('Erreur: $e')),
+      data: (users) {
+        if (users.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shield_outlined,
+                    color: AppColors.success, size: 48),
+                SizedBox(height: 12),
+                Text('Aucun compte banni',
+                    style: TextStyle(color: AppColors.textMuted)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: users.length,
+          itemBuilder: (_, i) => _UserCard(
+            user: users[i],
+            isBanned: true,
+            actions: [
+              _CardAction(
+                label: 'Debannir',
+                icon: Icons.lock_open_outlined,
+                color: Colors.white,
+                bgColor: null,
+                gradient: AppGradients.green,
+                onTap: () async {
+                  await ref
+                      .read(authProvider.notifier)
+                      .unbanUser(users[i].id);
+                  ref.invalidate(bannedUsersProvider);
+                  ref.invalidate(approvedUsersProvider);
+                  if (context.mounted) {
+                    AppToast.show(
+                        context, '${users[i].nomComplet} debannis');
+                  }
+                },
+              ),
+              _CardAction(
+                label: 'Supprimer',
+                icon: Icons.delete_forever_outlined,
+                color: AppColors.danger,
+                bgColor: AppColors.badgeDangerBg,
+                onTap: () async {
+                  final confirm = await _showConfirm(
+                    context,
+                    'Supprimer definitivement ${users[i].nomComplet} ?',
+                    'Cette action est irreversible.',
+                  );
+                  if (confirm == true) {
+                    await ref
+                        .read(authProvider.notifier)
+                        .permanentlyDeleteUser(users[i].id);
+                    ref.invalidate(bannedUsersProvider);
+                    if (context.mounted) {
+                      AppToast.show(
+                          context, '${users[i].nomComplet} supprime',
+                          type: ToastType.error);
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ═══════════════════════════════
+// TAB CREER ADMIN (superuser only)
+// ═══════════════════════════════
 class _CreateAdminTab extends ConsumerStatefulWidget {
   @override
-  ConsumerState<_CreateAdminTab> createState() =>
-      _CreateAdminTabState();
+  ConsumerState<_CreateAdminTab> createState() => _CreateAdminTabState();
 }
 
 class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
@@ -476,7 +462,6 @@ class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Info
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -491,7 +476,7 @@ class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Seul le superutilisateur peut creer un compte administrateur. Les admins peuvent gerer les utilisateurs et faire le suivi.',
+                      'Seul le superutilisateur peut creer un compte administrateur. Les admins peuvent gerer les utilisateurs.',
                       style: AppTextStyles.bodySmall
                           .copyWith(color: AppColors.accent),
                     ),
@@ -507,9 +492,8 @@ class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
             TextFormField(
               controller: _nomCtrl,
               style: AppTextStyles.input,
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Requis'
-                  : null,
+              validator: (v) =>
+              v == null || v.trim().isEmpty ? 'Requis' : null,
               decoration: const InputDecoration(
                 hintText: 'Nom du nouvel admin',
                 prefixIcon: Icon(Icons.person_outline,
@@ -524,7 +508,8 @@ class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
             TextFormField(
               controller: _pseudoCtrl,
               style: AppTextStyles.input,
-              validator: (v) => v == null || v.trim().length < 3
+              validator: (v) =>
+              v == null || v.trim().length < 3
                   ? 'Min 3 caracteres'
                   : null,
               decoration: const InputDecoration(
@@ -578,4 +563,232 @@ class _CreateAdminTabState extends ConsumerState<_CreateAdminTab> {
       ),
     );
   }
+}
+
+// ═══════════════════════════════
+// CARTE UTILISATEUR GENERIQUE
+// ═══════════════════════════════
+class _UserCard extends StatelessWidget {
+  final UserModel user;
+  final List<_CardAction> actions;
+  final bool showSelf;
+  final bool isBanned;
+
+  const _UserCard({
+    required this.user,
+    this.actions = const [],
+    this.showSelf = false,
+    this.isBanned = false,
+  });
+
+  Color get _roleColor {
+    switch (user.role) {
+      case UserRole.superuser:
+        return AppColors.accent;
+      case UserRole.admin:
+        return AppColors.warning;
+      default:
+        return AppColors.success;
+    }
+  }
+
+  LinearGradient get _roleGradient {
+    switch (user.role) {
+      case UserRole.superuser:
+        return AppGradients.brand;
+      case UserRole.admin:
+        return AppGradients.orange;
+      default:
+        return AppGradients.green;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isBanned
+              ? AppColors.badgeDangerBorder
+              : AppColors.border,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: _roleGradient,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(user.initiale,
+                      style: AppTextStyles.titleMedium
+                          .copyWith(color: Colors.white)),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(user.nomComplet,
+                              style: AppTextStyles.labelLarge,
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        if (showSelf)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.badgeAccentBg,
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text('Moi',
+                                style: AppTextStyles.badge.copyWith(
+                                    color: AppColors.accent,
+                                    fontSize: 8)),
+                          ),
+                      ],
+                    ),
+                    Text('@${user.pseudo}',
+                        style: AppTextStyles.bodySmall),
+                    if (isBanned && user.dateBan != null)
+                      Text(
+                        'Banni le ${user.dateBan!.day}/${user.dateBan!.month}/${user.dateBan!.year}',
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.danger),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Badge role
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _roleColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(100),
+                  border: Border.all(
+                      color: _roleColor.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  isBanned ? 'Banni' : user.roleLabel,
+                  style: AppTextStyles.badge.copyWith(
+                    color: isBanned ? AppColors.danger : _roleColor,
+                    fontSize: 9,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: actions.map((a) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        right: a == actions.last ? 0 : 8),
+                    child: GestureDetector(
+                      onTap: a.onTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8),
+                        decoration: BoxDecoration(
+                          gradient: a.gradient,
+                          color: a.gradient == null
+                              ? a.bgColor
+                              : null,
+                          borderRadius: BorderRadius.circular(10),
+                          border: a.gradient == null
+                              ? Border.all(
+                              color: a.color.withValues(alpha: 0.3))
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(a.icon, size: 13, color: a.color),
+                            const SizedBox(width: 5),
+                            Text(a.label,
+                                style: TextStyle(
+                                    color: a.color,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CardAction {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color? bgColor;
+  final LinearGradient? gradient;
+  final VoidCallback onTap;
+
+  const _CardAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.bgColor,
+    this.gradient,
+    required this.onTap,
+  });
+}
+
+Future<bool?> _showConfirm(
+    BuildContext context, String title, String message) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: const Color(0xFF10182A),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      title: Text(title, style: AppTextStyles.headlineSmall),
+      content: Text(message, style: AppTextStyles.bodySmall),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Annuler',
+              style: TextStyle(color: AppColors.textMuted)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Confirmer',
+              style: TextStyle(
+                  color: AppColors.danger, fontWeight: FontWeight.w700)),
+        ),
+      ],
+    ),
+  );
 }
