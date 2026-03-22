@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_text_styles.dart';
+import '../../features/auth/auth_provider.dart';
 
 enum NavTab { home, debts, archive, more }
 

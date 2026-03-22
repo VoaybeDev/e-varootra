@@ -67,18 +67,18 @@ class InvoiceService {
         );
 
         await _db.debtDao.createDebt(
-          DebtsCompanion.insert(
-            numeroFacture: numeroFacture,
-            clientId: clientId,
-            produitUniteId: ligne.produitUniteId,
-            quantite: ligne.quantite,
-            prixUnitaireFige: ligne.prixUnitaire,
-            montantTotal: montantLigne,
+          DebtsCompanion(
+            numeroFacture: Value(numeroFacture),
+            clientId: Value(clientId),
+            produitUniteId: Value(ligne.produitUniteId),
+            quantite: Value(ligne.quantite),
+            prixUnitaireFige: Value(ligne.prixUnitaire),
+            montantTotal: Value(montantLigne),
             montantPaye: Value(payeLigne),
-            montantRestant: resteLigne,
-            statut: statut,
-            enregistrePar: enregistrePar,
-            dateDette: dateDette,
+            montantRestant: Value(resteLigne),
+            statut: Value(statut),
+            enregistrePar: Value(enregistrePar),
+            dateDette: Value(dateDette),
           ),
         );
       }
@@ -94,13 +94,13 @@ class InvoiceService {
         for (final ligne in lignesCreees) {
           if (ligne.montantPaye > 0) {
             await _db.paymentDao.createPayment(
-              PaymentsCompanion.insert(
-                detteId: ligne.id,
-                montantPaye: ligne.montantPaye,
-                modePaiement: 'Especes',
+              PaymentsCompanion(
+                detteId: Value(ligne.id),
+                montantPaye: Value(ligne.montantPaye),
+                modePaiement: const Value('Especes'),
                 referencePaiement: Value(ref),
-                enregistrePar: enregistrePar,
-                datePaiement: dateDette,
+                enregistrePar: Value(enregistrePar),
+                datePaiement: Value(dateDette),
               ),
             );
           }

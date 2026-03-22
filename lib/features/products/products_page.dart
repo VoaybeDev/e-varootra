@@ -364,7 +364,7 @@ class _ProductCardState extends State<_ProductCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  entry.productUnit.labelUnite,
+                                  entry.unit.labelUnite,
                                   style: AppTextStyles.labelSmall.copyWith(
                                       fontWeight: FontWeight.w600),
                                 ),

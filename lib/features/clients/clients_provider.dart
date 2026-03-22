@@ -1,16 +1,14 @@
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/database/app_database.dart';
-import '../../core/database/tables/clients_table.dart';
 import '../../core/models/client_model.dart';
 
-// Provider liste clients actifs
 final clientsListProvider = FutureProvider<List<ClientModel>>((ref) async {
   final db = ref.watch(appDatabaseProvider);
   return db.clientDao.getActiveClients();
 });
 
-// Provider recherche clients
 final clientsSearchProvider = StateProvider<String>((ref) => '');
 
 final clientsFilteredProvider = FutureProvider<List<ClientModel>>((ref) async {
@@ -22,7 +20,6 @@ final clientsFilteredProvider = FutureProvider<List<ClientModel>>((ref) async {
   return db.clientDao.searchClients(search);
 });
 
-// Notifier pour les operations CRUD
 class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
   final AppDatabase _db;
 
@@ -58,10 +55,10 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
   }) async {
     try {
       await _db.clientDao.createClient(
-        ClientsCompanion.insert(
-          nomComplet: nomComplet,
-          telephone: telephone,
-          adresse: adresse,
+        ClientsCompanion(
+          nomComplet: Value(nomComplet),
+          telephone: Value(telephone),
+          adresse: Value(adresse),
         ),
       );
       await load();
@@ -95,7 +92,6 @@ class ClientsNotifier extends StateNotifier<AsyncValue<List<ClientModel>>> {
 
   Future<String?> deactivate(int id) async {
     try {
-      // Verifier si client a des dettes actives
       final debts = await _db.debtDao.getClientActiveDebts(id);
       if (debts.isNotEmpty) {
         return 'Impossible de supprimer un client avec des dettes non soldees';

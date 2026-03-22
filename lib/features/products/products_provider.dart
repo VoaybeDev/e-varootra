@@ -82,7 +82,10 @@ class ProductsNotifier extends StateNotifier<AsyncValue<List<ProductWithUnits>>>
       if (unitInputs.isEmpty) return 'Ajoutez au moins une unite';
 
       final productId = await _db.productDao.createProduct(
-        ProductsCompanion.insert(nom: nom, description: description),
+        ProductsCompanion(
+          nom: Value(nom),
+          description: Value(description),
+        ),
       );
 
       for (final u in unitInputs) {

@@ -96,10 +96,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  // Deconnexion
+// Deconnexion
   Future<void> logout() async {
     await _authService.logout();
-    state = const AuthState(clearUser: true) ;
     state = const AuthState();
   }
 

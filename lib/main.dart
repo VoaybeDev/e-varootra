@@ -3,10 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
+import 'app/utils/intl_init.dart';
 import 'core/database/app_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisation intl pour les dates en francais
+  await initIntl();
 
   // Orientation portrait uniquement
   await SystemChrome.setPreferredOrientations([
@@ -25,7 +29,7 @@ void main() async {
     ),
   );
 
-  // Initialisation de la base de données
+  // Initialisation base de donnees
   final database = AppDatabase();
 
   runApp(

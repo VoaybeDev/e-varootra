@@ -141,6 +141,20 @@ abstract class AppHelpers {
         .toUpperCase();
   }
 
+  // Format performance
+  static String performanceLabel(double rate) {
+    if (rate >= AppConstants.performanceExcellent) return 'Excellent';
+    if (rate >= AppConstants.performanceGood) return 'Bien';
+    return 'A ameliorer';
+  }
+
+  // Format performance avec emoji
+  static String performanceLabelEmoji(double rate) {
+    if (rate >= AppConstants.performanceExcellent) return 'Excellent';
+    if (rate >= AppConstants.performanceGood) return 'Bien';
+    return 'A ameliorer';
+  }
+
   // Afficher un dialog de confirmation
   static Future<bool> confirmDialog(
       BuildContext context, {

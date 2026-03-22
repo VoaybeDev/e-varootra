@@ -62,13 +62,13 @@ class PaymentService {
         );
 
         await _db.paymentDao.createPayment(
-          PaymentsCompanion.insert(
-            detteId: ligne.id,
-            montantPaye: aDistribuer,
-            modePaiement: modePaiement,
+          PaymentsCompanion(
+            detteId: Value(ligne.id),
+            montantPaye: Value(aDistribuer),
+            modePaiement: Value(modePaiement),
             referencePaiement: Value(ref),
-            enregistrePar: enregistrePar,
-            datePaiement: datePaiement,
+            enregistrePar: Value(enregistrePar),
+            datePaiement: Value(datePaiement),
           ),
         );
       }

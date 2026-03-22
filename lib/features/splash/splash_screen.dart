@@ -9,6 +9,7 @@ import '../../app/theme/app_text_styles.dart';
 import '../../app/utils/constants.dart';
 import '../../core/services/auth_service.dart';
 import '../../core/widgets/gradient_text.dart';
+import 'dart:ui' show ImageFilter;
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -369,5 +370,3 @@ class _AnimatedDotsState extends State<_AnimatedDots>
   }
 }
 
-// Import manquant
-import 'dart:ui' show ImageFilter;

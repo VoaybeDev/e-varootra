@@ -60,7 +60,7 @@ class ArchivePage extends ConsumerWidget {
                   children: [
                     Expanded(
                       child: StatCard(
-                        icon: Icons.check_double,
+                        icon: Icons.done_all,
                         label: 'Payees',
                         value: '${stats.nombreFactures}',
                         gradient: AppGradients.green,

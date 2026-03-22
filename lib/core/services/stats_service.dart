@@ -141,7 +141,7 @@ class StatsService {
     final tauxRecouvrement = AppHelpers.recoveryRate(totalDettesCreees, paiementsRecus);
     final tauxSoldees = AppHelpers.paidRate(totalFactures, facturesPayees);
     final moyenne = AppHelpers.averageDebt(totalDettesCreees, totalFactures);
-    final perf = AppHelpers.performanceLabelEmoji(tauxRecouvrement);
+    final perf = AppHelpers.performanceLabel(tauxRecouvrement);
 
     return MonthStats(
       month: month,
